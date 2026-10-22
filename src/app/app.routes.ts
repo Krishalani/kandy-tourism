@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminDemoGuard } from './core/guards/admin-demo.guard';
+import { adminAuthGuard } from './core/guards/admin-auth.guard';
 import { PublicLayout } from './layouts/public-layout/public-layout';
 
 const SITE = 'Kandy Day Trip Planner';
@@ -10,32 +10,32 @@ export const routes: Routes = [
     children: [
       {
         path: 'login',
-        title: `Admin demo sign-in | ${SITE}`,
+        title: `Admin sign-in | ${SITE}`,
         loadComponent: () => import('./features/admin/admin-login/admin-login'),
       },
       {
         path: '',
-        canActivate: [adminDemoGuard],
+        canActivate: [adminAuthGuard],
         loadComponent: () => import('./features/admin/admin-layout/admin-layout'),
         children: [
           {
             path: '',
-            title: `Admin dashboard (demo) | ${SITE}`,
+            title: `Admin dashboard | ${SITE}`,
             loadComponent: () => import('./features/admin/admin-dashboard/admin-dashboard'),
           },
           {
             path: 'attractions',
-            title: `Manage attractions (demo) | ${SITE}`,
+            title: `Manage attractions | ${SITE}`,
             loadComponent: () => import('./features/admin/manage-attractions/manage-attractions'),
           },
           {
             path: 'attractions/new',
-            title: `Add attraction (demo) | ${SITE}`,
+            title: `Add attraction | ${SITE}`,
             loadComponent: () => import('./features/admin/attraction-form/attraction-form'),
           },
           {
             path: 'attractions/:id/edit',
-            title: `Edit attraction (demo) | ${SITE}`,
+            title: `Edit attraction | ${SITE}`,
             loadComponent: () => import('./features/admin/attraction-form/attraction-form'),
           },
         ],

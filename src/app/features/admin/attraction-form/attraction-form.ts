@@ -13,18 +13,21 @@ import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { map, of, switchMap } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
+import { apiErrorCode, apiErrorMessage, apiProblem } from '../../../core/api/api';
 import {
-  ATTRACTION_CATEGORIES,
   Attraction,
   AttractionCategory,
   AttractionDraft,
+  CategoryInfo,
 } from '../../../core/models/attraction.model';
 import { AttractionService } from '../../../core/services/attraction.service';
+import { CatalogService } from '../../../core/services/catalog.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { toLoadState } from '../../../core/utils/load-state';
 import { Icon } from '../../../shared/components/icon/icon';
 import { EmptyState } from '../../../shared/components/state/empty-state';
+import { ErrorState } from '../../../shared/components/state/error-state';
 import { ImgFallbackDirective } from '../../../shared/directives/img-fallback.directive';
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -47,6 +50,22 @@ type FieldName =
   | 'latitude'
   | 'longitude'
   | 'estimatedVisitDurationMinutes';
+
+/** Fields whose errors are rendered next to the input. */
+const SHOWN_FIELDS = new Set<string>([
+  'name',
+  'slug',
+  'category',
+  'shortDescription',
+  'description',
+  'imageUrl',
+  'imageAlt',
+  'address',
+  'area',
+  'latitude',
+  'longitude',
+  'estimatedVisitDurationMinutes',
+] satisfies FieldName[]);
 
 export function slugify(text: string): string {
   return text
@@ -73,6 +92,7 @@ const splitLines = (text: string) =>
     RouterLink,
     Icon,
     EmptyState,
+    ErrorState,
     ImgFallbackDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,18 +107,20 @@ export default class AttractionForm {
   private readonly injector = inject(Injector);
   private readonly fb = inject(NonNullableFormBuilder);
 
-  protected readonly categories = ATTRACTION_CATEGORIES;
+  protected readonly categories = toSignal(
+    inject(CatalogService)
+      .getCategories()
+      .pipe(catchError(() => of<CategoryInfo[]>([]))),
+    { initialValue: [] as CategoryInfo[] },
+  );
 
   /** `undefined` while adding; the record (or null if missing) while editing. */
   protected readonly existing = toLoadState(
     inject(ActivatedRoute).paramMap.pipe(
-      map((params) => params.get('id')),
-      switchMap((id) =>
-        id
-          ? this.attractionService.getAttractionById(id).pipe(map((a) => a ?? null))
-          : of(undefined),
-      ),
+      map((params) => Number(params.get('id')) || null),
+      switchMap((id) => (id ? this.attractionService.getForEdit(id) : of(undefined))),
     ),
+    'This attraction couldn’t be loaded.',
   );
 
   protected readonly isEdit = computed(() => {
@@ -151,7 +173,7 @@ export default class AttractionForm {
   });
 
   private slugEditedManually = false;
-  private loadedId: string | null = null;
+  private loadedId: number | null = null;
 
   constructor() {
     effect(() => {
@@ -181,6 +203,9 @@ export default class AttractionForm {
 
   protected errorMessage(field: FieldName): string {
     const errors = this.form.controls[field].errors ?? {};
+    if (errors['server']) {
+      return errors['server'];
+    }
     if (errors['required']) {
       return 'This field is required.';
     }
@@ -220,39 +245,51 @@ export default class AttractionForm {
     }
 
     const draft = this.toDraft();
-    const editingId = this.loadedId ?? undefined;
+    const editingId = this.loadedId;
     this.saving.set(true);
 
-    this.attractionService
-      .isSlugAvailable(draft.slug, editingId)
-      .pipe(
-        switchMap((available) => {
-          if (!available) {
-            throw new Error('slug-taken');
-          }
-          return editingId
-            ? this.attractionService.updateAttraction(editingId, draft)
-            : this.attractionService.createAttraction(draft);
-        }),
-      )
-      .subscribe({
-        next: (saved) => {
-          this.saving.set(false);
-          this.toast.show(
-            `${saved.name} was ${editingId ? 'updated' : 'added'} in the demo data (this browser only).`,
-          );
-          this.router.navigateByUrl('/admin/attractions');
-        },
-        error: (error: Error) => {
-          this.saving.set(false);
-          if (error.message === 'slug-taken') {
-            this.form.controls.slug.setErrors({ taken: true });
-            this.focusFirstInvalid();
-          } else {
-            this.saveError.set(error.message || 'The attraction could not be saved.');
-          }
-        },
-      });
+    const request = editingId
+      ? this.attractionService.updateAttraction(editingId, draft)
+      : this.attractionService.createAttraction(draft);
+
+    request.subscribe({
+      next: (saved) => {
+        this.saving.set(false);
+        this.toast.show(`${saved.name} was ${editingId ? 'updated' : 'added'}.`);
+        this.router.navigateByUrl('/admin/attractions');
+      },
+      error: (error: unknown) => {
+        this.saving.set(false);
+        if (apiErrorCode(error) === 'slug-taken') {
+          this.form.controls.slug.setErrors({ taken: true });
+          this.focusFirstInvalid();
+          return;
+        }
+        const unmatched = this.applyServerErrors(apiProblem(error)?.errors);
+        this.saveError.set(
+          [
+            apiErrorMessage(error, 'The attraction could not be saved. Please try again.'),
+            ...unmatched,
+          ].join(' '),
+        );
+        this.focusFirstInvalid();
+      },
+    });
+  }
+
+  /** Shows API validation messages on the matching fields; returns messages with no matching field. */
+  private applyServerErrors(errors: Record<string, string[]> | undefined): string[] {
+    const unmatched: string[] = [];
+    for (const [key, messages] of Object.entries(errors ?? {})) {
+      const field = key.split(/[.[]/)[0];
+      const control = this.form.get(field === 'gallery' ? 'galleryUrls' : field);
+      if (control && SHOWN_FIELDS.has(field)) {
+        control.setErrors({ server: messages[0] });
+      } else {
+        unmatched.push(...messages);
+      }
+    }
+    return unmatched;
   }
 
   private patch(a: Attraction): void {
@@ -289,7 +326,7 @@ export default class AttractionForm {
     return {
       name,
       slug: v.slug.trim(),
-      category: v.category as AttractionCategory,
+      category: v.category,
       shortDescription: v.shortDescription.trim(),
       description: v.description
         .split(/\n\s*\n/)

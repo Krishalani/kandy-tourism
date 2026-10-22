@@ -2,21 +2,28 @@
   <app-icon name="arrow-left" [size]="16" /> Back to attractions
 </a>
 
+@let load = existing();
 @if (notFound()) {
   <app-empty-state
     icon="map-pin"
     title="Attraction not found"
-    message="It may have been deleted in this browser."
+    message="It may have been deleted by another admin."
   >
     <a routerLink="/admin/attractions" class="btn btn--primary">Back to attractions</a>
   </app-empty-state>
+} @else if (load.status === 'error') {
+  <app-error-state [message]="load.message">
+    <a routerLink="/admin/attractions" class="btn">Back to attractions</a>
+  </app-error-state>
+} @else if (load.status === 'loading') {
+  <p role="status">Loading attraction…</p>
 } @else {
   <h1 class="title">{{ isEdit() ? 'Edit attraction' : 'Add attraction' }}</h1>
   <p class="notice">
     <app-icon name="info" [size]="18" />
     <span>
-      Demo only: saving updates the data in this browser’s local storage. Nothing is sent to a
-      server. Opening hours, fees and durations are shown to visitors as estimates.
+      Saving updates the live website. Opening hours, fees and durations are shown to visitors as
+      unverified estimates.
     </span>
   </p>
 
@@ -75,7 +82,7 @@
                 [attr.aria-invalid]="showError('category')"
               >
                 <option value="" disabled>Choose a category</option>
-                @for (c of categories; track c.id) {
+                @for (c of categories(); track c.id) {
                   <option [value]="c.id">{{ c.label }}</option>
                 }
               </select>
@@ -299,7 +306,12 @@
 
       <div class="actions">
         <button type="submit" class="btn btn--primary btn--lg btn--block" [disabled]="saving()">
-          <app-icon name="check" [size]="18" /> {{ isEdit() ? 'Save changes' : 'Add attraction' }}
+          <app-icon name="check" [size]="18" />
+          @if (saving()) {
+            Saving…
+          } @else {
+            {{ isEdit() ? 'Save changes' : 'Add attraction' }}
+          }
         </button>
         <a routerLink="/admin/attractions" class="btn btn--block">Cancel</a>
       </div>

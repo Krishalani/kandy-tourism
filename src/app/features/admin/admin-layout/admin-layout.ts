@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { AdminDemoAuthService } from '../../../core/services/admin-demo-auth.service';
+import { AdminAuthService } from '../../../core/services/admin-auth.service';
 import { Icon } from '../../../shared/components/icon/icon';
 import { Logo } from '../../../shared/components/logo/logo';
 
@@ -15,7 +15,7 @@ import { Logo } from '../../../shared/components/logo/logo';
         <div class="container admin__bar-inner">
           <a routerLink="/admin" class="admin__brand">
             <app-logo [size]="34" [inverted]="true" />
-            <span>Admin <span class="admin__demo">Demo</span></span>
+            <span>Admin</span>
           </a>
           <nav aria-label="Admin">
             <ul class="admin__nav">
@@ -42,19 +42,15 @@ import { Logo } from '../../../shared/components/logo/logo';
               <li>
                 <button type="button" (click)="signOut()">
                   <app-icon name="logout" [size]="16" /> Sign out
+                  @if (auth.admin(); as admin) {
+                    <span class="visually-hidden">{{ admin.displayName }}</span>
+                  }
                 </button>
               </li>
             </ul>
           </nav>
         </div>
       </header>
-      <div class="admin__banner" role="note">
-        <div class="container">
-          <app-icon name="info" [size]="16" />
-          Demo mode: changes are saved only in this browser’s local storage and are not sent to a
-          server. The sign-in is not real authentication.
-        </div>
-      </div>
       <main class="container admin__main">
         <router-outlet />
       </main>
@@ -62,7 +58,7 @@ import { Logo } from '../../../shared/components/logo/logo';
   `,
 })
 export default class AdminLayout {
-  private readonly auth = inject(AdminDemoAuthService);
+  protected readonly auth = inject(AdminAuthService);
   private readonly router = inject(Router);
 
   protected signOut(): void {

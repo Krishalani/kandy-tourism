@@ -35,16 +35,6 @@
   }
 }
 
-.admin__demo {
-  margin-left: var(--space-1);
-  padding: 0.1rem 0.45rem;
-  border-radius: var(--radius-sm);
-  background: var(--color-gold-400);
-  color: var(--color-forest-900);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-}
-
 .admin__nav {
   display: flex;
   flex-wrap: wrap;
@@ -73,24 +63,6 @@
       background: rgb(255 255 255 / 12%);
       color: var(--color-white);
     }
-  }
-}
-
-.admin__banner {
-  padding-block: var(--space-2);
-  background: var(--color-gold-100);
-  border-bottom: 1px solid #ecd6a8;
-  color: var(--color-ink-700);
-  font-size: var(--text-xs);
-
-  .container {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  app-icon {
-    color: var(--color-gold-700);
   }
 }
 

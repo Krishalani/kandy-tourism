@@ -1,7 +1,7 @@
 <div class="heading">
   <div>
     <h1>Manage attractions</h1>
-    <p class="muted">Changes are stored only in this browser (demo).</p>
+    <p class="muted">Changes are saved to the database and appear on the website immediately.</p>
   </div>
   <a routerLink="/admin/attractions/new" class="btn btn--primary">
     <app-icon name="plus" [size]="18" /> Add attraction
@@ -16,6 +16,7 @@
       class="input"
       type="search"
       placeholder="Name, area or tag"
+      maxlength="100"
       [value]="query()"
       (input)="query.set($any($event.target).value)"
     />
@@ -24,7 +25,7 @@
     <label class="field__label" for="admin-category">Category</label>
     <select id="admin-category" class="select" (change)="category.set($any($event.target).value)">
       <option value="all" [selected]="category() === 'all'">All categories</option>
-      @for (c of categories; track c.id) {
+      @for (c of categories(); track c.id) {
         <option [value]="c.id" [selected]="category() === c.id">{{ c.label }}</option>
       }
     </select>
@@ -32,9 +33,11 @@
 </div>
 
 @let s = state();
-@if (s.status === 'error') {
+@if (s.status === 'loading') {
+  <p class="count" role="status">Loading attractions…</p>
+} @else if (s.status === 'error') {
   <app-error-state [message]="s.message" />
-} @else if (s.status === 'ready' && rows().length === 0) {
+} @else if (rows().length === 0) {
   <app-empty-state
     icon="search"
     title="No attractions found"
@@ -42,11 +45,17 @@
     [compact]="true"
   />
 } @else {
-  <p class="count" aria-live="polite">{{ rows().length }} attractions</p>
+  <p class="count" aria-live="polite">
+    {{ rows().length }} attractions
+    @if (truncated()) {
+      (showing the first {{ rows().length }} of {{ s.data.totalCount }} — narrow the search to find
+      others)
+    }
+  </p>
   <div class="table-wrap">
     <table class="table">
       <caption class="visually-hidden">
-        Attractions in the demo data
+        Listed attractions
       </caption>
       <thead>
         <tr>
@@ -78,7 +87,7 @@
                 </div>
               </div>
             </td>
-            <td data-label="Category">{{ (a.category | category).label }}</td>
+            <td data-label="Category">{{ a.categoryName }}</td>
             <td data-label="Visit">{{ (a.estimatedVisitDurationMinutes | duration) || '—' }}</td>
             <td data-label="Featured">
               @if (a.featured) {

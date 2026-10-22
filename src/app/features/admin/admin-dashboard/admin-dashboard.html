@@ -1,23 +1,26 @@
 <div class="heading">
   <div>
     <h1>Dashboard</h1>
-    <p class="muted">An overview of the prototype’s attraction data.</p>
+    <p class="muted">An overview of the attraction catalogue and saved guest plans.</p>
   </div>
   <a routerLink="/admin/attractions/new" class="btn btn--primary">
     <app-icon name="plus" [size]="18" /> Add attraction
   </a>
 </div>
 
-@if (state().status === 'error') {
-  <app-error-state message="Attraction data couldn’t be loaded." />
+@let load = state();
+@if (load.status === 'loading') {
+  <app-loading-state label="Loading dashboard" [count]="2" />
+} @else if (load.status === 'error') {
+  <app-error-state [message]="load.message" />
 }
 
 @if (stats(); as s) {
   <ul class="stat-cards">
     <li class="stat-card">
       <span class="stat-card__icon"><app-icon name="map-pin" /></span>
-      <span class="stat-card__value">{{ s.total }}</span>
-      <span class="stat-card__label">Total attractions</span>
+      <span class="stat-card__value">{{ s.totalAttractions }}</span>
+      <span class="stat-card__label">Listed attractions</span>
     </li>
     <li class="stat-card">
       <span class="stat-card__icon"><app-icon name="grid" /></span>
@@ -26,7 +29,7 @@
     </li>
     <li class="stat-card">
       <span class="stat-card__icon"><app-icon name="star" /></span>
-      <span class="stat-card__value">{{ s.featured }}</span>
+      <span class="stat-card__value">{{ s.featuredAttractions }}</span>
       <span class="stat-card__label">Featured attractions</span>
     </li>
     <li class="stat-card">
@@ -40,10 +43,10 @@
     <section class="panel" aria-labelledby="by-category-title">
       <h2 id="by-category-title" class="panel__title">Attractions by category</h2>
       <ul class="bars">
-        @for (row of s.byCategory; track row.category.id) {
+        @for (row of s.byCategory; track row.slug) {
           <li class="bar">
             <span class="bar__label"
-              ><app-icon [name]="row.category.icon" [size]="16" /> {{ row.category.label }}</span
+              ><app-icon [name]="row.icon" [size]="16" /> {{ row.name }}</span
             >
             <span class="bar__track" aria-hidden="true">
               <span class="bar__fill" [style.width.%]="(row.count / s.max) * 100"></span>
@@ -54,26 +57,17 @@
       </ul>
     </section>
 
-    <section class="panel" aria-labelledby="demo-data-title">
-      <h2 id="demo-data-title" class="panel__title">Demo data</h2>
-      @if (demoData.hasDemoChanges()) {
-        <p>
-          You have made changes in this browser. They are stored in local storage only and are
-          visible only on this device.
-        </p>
-      } @else {
-        <p>You are viewing the original prototype data. No changes have been made yet.</p>
-      }
+    <section class="panel" aria-labelledby="guest-plans-title">
+      <h2 id="guest-plans-title" class="panel__title">Guest plans</h2>
+      <p>
+        <strong>{{ s.guestItineraries }}</strong>
+        {{ s.guestItineraries === 1 ? 'guest itinerary has' : 'guest itineraries have' }} been
+        saved, with <strong>{{ s.plannedStops }}</strong> planned
+        {{ s.plannedStops === 1 ? 'stop' : 'stops' }} at listed attractions.
+      </p>
+      <p class="muted">Tourists plan without an account; plans are anonymous.</p>
       <div class="actions">
         <a routerLink="/admin/attractions" class="btn">Manage attractions</a>
-        <button
-          type="button"
-          class="btn btn--danger"
-          [disabled]="!demoData.hasDemoChanges()"
-          (click)="resetDemo()"
-        >
-          <app-icon name="refresh" [size]="16" /> Reset demo data
-        </button>
       </div>
     </section>
   </div>

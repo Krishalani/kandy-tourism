@@ -40,7 +40,7 @@ import { Logo } from '../logo/logo';
           <ul>
             <li><a routerLink="/about">About Kandy</a></li>
             <li><a routerLink="/contact">Contact</a></li>
-            <li><a routerLink="/admin">Admin demo</a></li>
+            <li><a routerLink="/admin">Admin</a></li>
           </ul>
         </nav>
 
