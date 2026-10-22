@@ -1,0 +1,54 @@
+// Leaflet marker and control styling. Markers are created by Leaflet outside Angular's
+// view encapsulation, so their styles must be global.
+
+.route-marker {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--color-white);
+  border-radius: 50%;
+  background: var(--color-forest-700);
+  color: var(--color-white);
+  font: 700 14px/1 var(--font-body);
+  box-shadow: 0 3px 8px rgb(15 42 28 / 35%);
+}
+
+.route-marker--final {
+  background: var(--color-forest-900);
+  outline: 3px solid var(--color-gold-400);
+}
+
+.route-marker--start {
+  width: 52px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--color-gold-400);
+  color: var(--color-forest-900);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.leaflet-container {
+  font-family: var(--font-body);
+  background: var(--color-forest-50);
+}
+
+.leaflet-popup-content {
+  margin: 10px 14px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+
+  strong {
+    display: block;
+    color: var(--color-forest-900);
+  }
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--color-ink-600);
+}
+
+.leaflet-bar a {
+  color: var(--color-ink-900);
+}
