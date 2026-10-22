@@ -23,6 +23,17 @@
 
 @if (!plan.restored()) {
   <div class="container plan-loading" role="status">Loading your saved plan…</div>
+} @else if (plan.loadError() && plan.count() === 0) {
+  <div class="container">
+    <app-error-state
+      title="We couldn’t load your saved plan"
+      [message]="plan.loadError()!"
+      [retryable]="true"
+      (retry)="retryLoad()"
+    >
+      <a routerLink="/explore" class="btn">Explore attractions</a>
+    </app-error-state>
+  </div>
 } @else if (plan.count() === 0) {
   <div class="container">
     <app-empty-state
@@ -33,8 +44,14 @@
       <a routerLink="/explore" class="btn btn--primary btn--lg">
         <app-icon name="compass" /> Explore attractions
       </a>
-      <button type="button" class="btn btn--lg" (click)="addSampleDay()">
-        <app-icon name="sparkles" /> Try a sample day
+      <button
+        type="button"
+        class="btn btn--lg"
+        [disabled]="addingSample()"
+        (click)="addSampleDay()"
+      >
+        <app-icon name="sparkles" />
+        {{ addingSample() ? 'Adding sample day…' : 'Try a sample day' }}
       </button>
     </app-empty-state>
   </div>
@@ -53,8 +70,12 @@
           <h2 id="stops-title" class="panel__title">
             Your stops <span class="stops__count">{{ plan.count() }} of {{ plan.maxStops }}</span>
           </h2>
-          <p class="stops__hint no-print">
-            Drag the handle, or use the arrow buttons, to change the order.
+          <p class="stops__hint no-print" aria-live="polite">
+            @if (plan.saving()) {
+              Saving your changes…
+            } @else {
+              Drag the handle, or use the arrow buttons, to change the order.
+            }
           </p>
         </div>
 

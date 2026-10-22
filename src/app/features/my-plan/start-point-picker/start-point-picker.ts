@@ -7,9 +7,11 @@ import {
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
-import { Attraction } from '../../../core/models/attraction.model';
+import { catchError, map, of } from 'rxjs';
+import { AttractionSummary } from '../../../core/models/attraction.model';
+import { StartPoint, StartPreset } from '../../../core/models/trip-plan.model';
 import { AttractionService } from '../../../core/services/attraction.service';
+import { CatalogService } from '../../../core/services/catalog.service';
 import {
   GeolocationError,
   GeolocationFailure,
@@ -39,28 +41,36 @@ export class StartPointPicker {
   protected readonly plan = inject(TripPlanService);
   private readonly geolocation = inject(GeolocationService);
 
+  protected readonly presets = toSignal(
+    inject(CatalogService)
+      .getStartPoints()
+      .pipe(catchError(() => of<StartPreset[]>([]))),
+    { initialValue: [] as StartPreset[] },
+  );
+
   protected readonly attractions = toSignal(
     inject(AttractionService)
-      .getAttractions()
-      .pipe(map((list) => [...list].sort((a, b) => a.name.localeCompare(b.name)))),
-    { initialValue: [] as Attraction[] },
+      .search({ sort: 'name', pageSize: 100 })
+      .pipe(
+        map((result) => result.items),
+        catchError(() => of<AttractionSummary[]>([])),
+      ),
+    { initialValue: [] as AttractionSummary[] },
   );
 
   protected readonly expanded = signal(false);
+  protected readonly saving = signal(false);
 
-  protected readonly choice = linkedSignal<Choice>(() => {
-    const start = this.plan.start();
-    return start.type === 'preset' ? `preset:${start.presetId}` : start.type;
-  });
+  protected readonly choice = linkedSignal<Choice>(() => this.currentChoice());
 
   protected readonly selectedAttractionId = linkedSignal(() => {
     const start = this.plan.start();
-    return start.type === 'attraction' ? start.attractionId : '';
+    return start?.type === 'attraction' ? start.attractionId : 0;
   });
 
   protected readonly customText = linkedSignal(() => {
     const start = this.plan.start();
-    return start.type === 'custom' ? start.query : '';
+    return start?.type === 'custom' ? start.query : '';
   });
 
   protected readonly geoState = signal<'idle' | 'requesting' | 'error'>('idle');
@@ -69,24 +79,25 @@ export class StartPointPicker {
   /** True when the chosen attraction start is also one of the itinerary stops. */
   protected readonly startIsAlsoStop = computed(() => {
     const start = this.plan.start();
-    return start.type === 'attraction' && this.plan.isInPlan(start.attractionId);
+    return start?.type === 'attraction' && this.plan.isInPlan(start.attractionId);
   });
 
-  protected readonly customStartActive = computed(() => this.plan.start().type === 'custom');
+  protected readonly customStartActive = computed(() => this.plan.start()?.type === 'custom');
 
   protected select(choice: Choice): void {
     this.choice.set(choice);
     if (choice.startsWith('preset:')) {
-      this.plan.setStart({ type: 'preset', presetId: choice.slice('preset:'.length) });
+      void this.apply({ type: 'preset', presetId: choice.slice('preset:'.length) });
     } else if (choice === 'attraction' && this.selectedAttractionId()) {
-      this.plan.setStart({ type: 'attraction', attractionId: this.selectedAttractionId() });
+      void this.apply({ type: 'attraction', attractionId: this.selectedAttractionId() });
     }
   }
 
-  protected chooseAttraction(id: string): void {
+  protected chooseAttraction(value: string): void {
+    const id = Number(value);
     this.selectedAttractionId.set(id);
     if (id) {
-      this.plan.setStart({ type: 'attraction', attractionId: id });
+      void this.apply({ type: 'attraction', attractionId: id });
     }
   }
 
@@ -94,7 +105,7 @@ export class StartPointPicker {
     event.preventDefault();
     const query = this.customText().trim().slice(0, 200);
     if (query) {
-      this.plan.setStart({ type: 'custom', query });
+      void this.apply({ type: 'custom', query });
     }
   }
 
@@ -103,12 +114,27 @@ export class StartPointPicker {
     this.geoMessage.set('');
     try {
       const point = await this.geolocation.requestCurrentPosition();
-      this.plan.setStart({ type: 'current', ...point });
+      await this.plan.setStart({ type: 'current', ...point });
       this.geoState.set('idle');
     } catch (error) {
       const reason = error instanceof GeolocationError ? error.reason : 'unavailable';
       this.geoState.set('error');
       this.geoMessage.set(GEO_MESSAGES[reason]);
     }
+  }
+
+  /** On failure the plan keeps its saved start and the picker snaps back to it. */
+  private async apply(start: StartPoint): Promise<void> {
+    this.saving.set(true);
+    const saved = await this.plan.setStart(start);
+    this.saving.set(false);
+    if (!saved) {
+      this.choice.set(this.currentChoice());
+    }
+  }
+
+  private currentChoice(): Choice {
+    const start = this.plan.start();
+    return start?.type === 'preset' ? `preset:${start.presetId}` : (start?.type ?? 'custom');
   }
 }

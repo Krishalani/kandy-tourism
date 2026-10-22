@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -6,6 +13,7 @@ import { TripPlanService } from '../../core/services/trip-plan.service';
 import { suggestShorterOrder, totalStraightLineKm } from '../../core/utils/route-planner';
 import { Icon } from '../../shared/components/icon/icon';
 import { EmptyState } from '../../shared/components/state/empty-state';
+import { ErrorState } from '../../shared/components/state/error-state';
 import { ItineraryList } from './itinerary-list/itinerary-list';
 import { RouteMap } from './route-map/route-map';
 import { StartPointPicker } from './start-point-picker/start-point-picker';
@@ -13,7 +21,16 @@ import { TripSummary } from './trip-summary/trip-summary';
 
 @Component({
   selector: 'app-my-plan',
-  imports: [RouterLink, Icon, EmptyState, StartPointPicker, ItineraryList, RouteMap, TripSummary],
+  imports: [
+    RouterLink,
+    Icon,
+    EmptyState,
+    ErrorState,
+    StartPointPicker,
+    ItineraryList,
+    RouteMap,
+    TripSummary,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './my-plan.scss',
   templateUrl: './my-plan.html',
@@ -24,6 +41,7 @@ export default class MyPlan {
   private readonly toast = inject(ToastService);
 
   private readonly mapSection = viewChild<ElementRef<HTMLElement>>('mapSection');
+  protected readonly addingSample = signal(false);
 
   protected async clearPlan(): Promise<void> {
     const confirmed = await this.confirm.confirm({
@@ -79,11 +97,17 @@ export default class MyPlan {
     }
   }
 
-  protected addSampleDay(): void {
-    const added = this.plan.addSampleDay();
+  protected async addSampleDay(): Promise<void> {
+    this.addingSample.set(true);
+    const added = await this.plan.addSampleDay();
+    this.addingSample.set(false);
     if (added > 0) {
       this.toast.show(`Added a sample day with ${added} stops. Rearrange them however you like.`);
     }
+  }
+
+  protected retryLoad(): void {
+    void this.plan.restore();
   }
 
   protected print(): void {

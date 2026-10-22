@@ -69,12 +69,12 @@ export class ItineraryList {
   }
 
   protected remove(stop: ItineraryStop): void {
-    const { id, name } = stop.attraction;
-    const index = this.plan.remove(id);
-    this.announcement.set(`${name} removed. ${this.plan.count()} stops remaining.`);
-    this.toast.show(`${name} was removed from My Plan.`, {
+    const attraction = stop.attraction;
+    const index = this.plan.remove(attraction.id);
+    this.announcement.set(`${attraction.name} removed. ${this.plan.count()} stops remaining.`);
+    this.toast.show(`${attraction.name} was removed from My Plan.`, {
       tone: 'info',
-      action: { label: 'Undo', run: () => this.plan.insertAt(id, index) },
+      action: { label: 'Undo', run: () => this.plan.insertAt(attraction, index) },
     });
 
     const next = this.plan.stops()[Math.min(index, this.plan.count() - 1)];

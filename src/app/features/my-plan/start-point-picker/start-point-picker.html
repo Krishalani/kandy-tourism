@@ -29,17 +29,17 @@
     <p class="notice notice--info start__notice">
       <app-icon name="info" [size]="18" />
       <span>
-        A typed start is passed to Google Maps as text. It can’t be shown on the preview map in this
-        prototype.
+        A typed start is passed to Google Maps as text. It isn’t looked up on a map, so it can’t be
+        shown on the route preview.
       </span>
     </p>
   }
 
   <div id="start-options" class="start__options" [hidden]="!expanded()">
-    <fieldset class="options">
+    <fieldset class="options" [attr.aria-busy]="saving()">
       <legend class="visually-hidden">Choose where your day starts</legend>
 
-      @for (preset of plan.startPresets; track preset.id) {
+      @for (preset of presets(); track preset.id) {
         <label class="option">
           <input
             type="radio"
