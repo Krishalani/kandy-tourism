@@ -1,25 +1,27 @@
 import { IconName } from '../../shared/components/icon/icons';
 
-export type AttractionCategory =
-  'heritage' | 'religious' | 'nature' | 'viewpoints' | 'museums' | 'lakes';
+/** Category slug as returned by the API, e.g. `religious`. */
+export type AttractionCategory = string;
 
 export interface CategoryInfo {
   id: AttractionCategory;
   label: string;
   icon: IconName;
+  description?: string;
 }
 
-export const ATTRACTION_CATEGORIES: readonly CategoryInfo[] = [
-  { id: 'heritage', label: 'Heritage & Culture', icon: 'landmark' },
-  { id: 'religious', label: 'Religious Sites', icon: 'temple' },
-  { id: 'nature', label: 'Nature & Gardens', icon: 'leaf' },
-  { id: 'viewpoints', label: 'Viewpoints', icon: 'mountain' },
-  { id: 'museums', label: 'Museums', icon: 'museum' },
-  { id: 'lakes', label: 'Lakes & Scenic Places', icon: 'waves' },
-];
+const CATEGORY_ICONS: Readonly<Record<string, IconName>> = {
+  heritage: 'landmark',
+  religious: 'temple',
+  nature: 'leaf',
+  viewpoints: 'mountain',
+  museums: 'museum',
+  lakes: 'waves',
+};
 
-export function getCategoryInfo(id: AttractionCategory): CategoryInfo {
-  return ATTRACTION_CATEGORIES.find((c) => c.id === id) ?? ATTRACTION_CATEGORIES[0];
+/** Presentation only: categories come from the API, icons are chosen by the UI. */
+export function categoryIcon(slug: AttractionCategory): IconName {
+  return CATEGORY_ICONS[slug] ?? 'map-pin';
 }
 
 export interface ImageCredit {
@@ -33,36 +35,48 @@ export interface GalleryImage {
   credit?: ImageCredit;
 }
 
-/** Shape shared by the mock data and a future ASP.NET Core Web API DTO. */
-export interface Attraction {
-  id: string;
+/** List/card shape (`AttractionSummaryDto`); also embedded in itinerary stops. */
+export interface AttractionSummary {
+  id: number;
   name: string;
   slug: string;
   category: AttractionCategory;
+  categoryName: string;
   shortDescription: string;
-  description: string[];
   imageUrl: string;
   imageAlt: string;
-  imageCredit?: ImageCredit;
-  gallery: GalleryImage[];
-  address: string;
   area: string;
   latitude: number;
   longitude: number;
   /** True when the coordinates are a best-effort estimate rather than a surveyed point. */
   coordinatesApproximate: boolean;
+  /** Demo estimate only; never present as confirmed information. */
   estimatedVisitDurationMinutes?: number;
+  featured: boolean;
+}
+
+/** Details shape (`AttractionDetailsDto`). */
+export interface Attraction extends AttractionSummary {
+  description: string[];
+  imageCredit?: ImageCredit;
+  gallery: GalleryImage[];
+  address: string;
   /** Demo estimate only; never present as confirmed information. */
   openingHours?: string;
   /** Demo estimate only; never present as confirmed information. */
   entranceFee?: string;
   visitorTips: string[];
-  featured: boolean;
   tags: string[];
 }
 
-/** Editable fields for creating or updating an attraction. */
-export type AttractionDraft = Omit<Attraction, 'id'>;
+/** Admin create/update payload (`AttractionUpsertRequest`). */
+export type AttractionDraft = Omit<Attraction, 'id' | 'categoryName'>;
+
+export interface NearbyAttraction {
+  attraction: AttractionSummary;
+  /** Straight-line distance; not a travel distance. */
+  distanceKm: number;
+}
 
 export type AttractionSort = 'recommended' | 'name' | 'duration-asc' | 'duration-desc';
 
@@ -73,4 +87,14 @@ export interface AttractionSearchCriteria {
   category?: AttractionCategory | 'all';
   duration?: DurationFilter;
   sort?: AttractionSort;
+  featured?: boolean;
+  page?: number;
+  pageSize?: number;
 }
+
+export const DURATION_FILTERS: { id: DurationFilter; label: string }[] = [
+  { id: 'any', label: 'Any length' },
+  { id: 'short', label: 'Quick stop (under 1 hr)' },
+  { id: 'medium', label: '1 – 2 hours' },
+  { id: 'long', label: 'Half day (2 hrs +)' },
+];

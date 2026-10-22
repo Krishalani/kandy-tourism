@@ -1,61 +1,101 @@
 import { Injectable, afterNextRender, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, firstValueFrom } from 'rxjs';
+import { apiErrorCode, apiErrorMessage, apiProblem, hasStatus, isUnreachable } from '../api/api';
+import { SAMPLE_DAY_SLUGS } from '../data/site-content';
+import { AttractionSummary } from '../models/attraction.model';
 import {
-  DEFAULT_START_PRESET_ID,
-  MOCK_SAMPLE_ITINERARY_IDS,
-  MOCK_START_PRESETS,
-} from '../data/start-presets.mock';
-import { Attraction } from '../models/attraction.model';
-import { AddToPlanResult, StartPoint, StartPreset, TripPlanState } from '../models/trip-plan.model';
-import { isValidLatitude, isValidLongitude } from '../utils/geo';
+  AddToPlanResult,
+  GeoPoint,
+  GuestPlanRef,
+  Itinerary,
+  ResolvedStart,
+  StartPoint,
+} from '../models/trip-plan.model';
 import {
   MAX_ITINERARY_STOPS,
   buildGoogleMapsDirectionsUrl,
   moveItem,
-  resolveItinerary,
-  resolveStart,
+  numberStops,
   summarizeItinerary,
+  toResolvedStart,
 } from '../utils/route-planner';
-import { AttractionService } from './attraction.service';
 import { BrowserStorageService } from './browser-storage.service';
+import { ItineraryApiService, UpdateStartRequest } from './itinerary-api.service';
+import { ToastService } from './toast.service';
 
-export const TRIP_PLAN_STORAGE_KEY = 'kdtp.trip-plan.v1';
+/** The only plan data kept in the browser: a reference to the server-side guest itinerary. */
+export const GUEST_PLAN_STORAGE_KEY = 'kdtp.guest-plan.v2';
+/** The frontend prototype stored the whole plan here; it is no longer used. */
+const LEGACY_STORAGE_KEY = 'kdtp.trip-plan.v1';
 
-const DEFAULT_START: StartPoint = { type: 'preset', presetId: DEFAULT_START_PRESET_ID };
+const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+type Change = (itinerary: Itinerary) => Itinerary;
 
 /**
- * Single source of truth for the tourist's itinerary. The header, Explore, Attraction
- * Details and My Plan all read from here, so the list, map preview and Google Maps link
- * always use the same order. The order is only changed by explicit tourist actions.
+ * Single source of truth for the tourist's itinerary, persisted by the Web API. The header,
+ * Explore, Attraction Details and My Plan all read from here, so the list, map preview and
+ * Google Maps link always use the same order.
+ *
+ * Changes are shown immediately and saved in the order they were made. The server's response
+ * is authoritative: if a save fails, the plan returns to the last state the server confirmed
+ * and the tourist is told what happened.
  */
 @Injectable({ providedIn: 'root' })
 export class TripPlanService {
+  private readonly api = inject(ItineraryApiService);
   private readonly storage = inject(BrowserStorageService);
-  private readonly attractions = toSignal(inject(AttractionService).getAttractions(), {
-    initialValue: [] as Attraction[],
-  });
+  private readonly toast = inject(ToastService);
 
-  private readonly state = signal<TripPlanState>({
-    version: 1,
-    stopIds: [],
-    start: DEFAULT_START,
-  });
+  private ref: GuestPlanRef | null = null;
+  private queue: Promise<unknown> = Promise.resolve();
+  private readonly pending = signal(0);
+  /** Last state confirmed by the server. */
+  private readonly confirmed = signal<Itinerary | null>(null);
+  /** What the UI shows: the confirmed state plus changes that are still being saved. */
+  private readonly view = signal<Itinerary | null>(null);
+  /** Device location chosen for this page session only; never sent to the API or stored. */
+  private readonly sessionLocation = signal<GeoPoint | null>(null);
 
   readonly maxStops = MAX_ITINERARY_STOPS;
-  readonly startPresets: readonly StartPreset[] = MOCK_START_PRESETS;
 
-  /** False until the saved plan has been read from this browser's storage. */
+  /** False until the saved plan has been loaded from the API (or there was none). */
   readonly restored = signal(false);
+  /** Set when the saved plan exists but couldn't be loaded (e.g. the API is unreachable). */
+  readonly loadError = signal<string | null>(null);
+  readonly saving = computed(() => this.pending() > 0);
 
-  private readonly attractionsById = computed(
-    () => new Map(this.attractions().map((a) => [a.id, a] as const)),
-  );
+  readonly start = computed<StartPoint | null>(() => {
+    const location = this.sessionLocation();
+    if (location) {
+      return { type: 'current', ...location };
+    }
+    const start = this.view()?.start;
+    switch (start?.type) {
+      case 'preset':
+        return { type: 'preset', presetId: start.presetSlug ?? '' };
+      case 'attraction':
+        return { type: 'attraction', attractionId: start.attractionId ?? 0 };
+      case 'custom':
+        return { type: 'custom', query: start.query ?? start.label };
+      default:
+        return null;
+    }
+  });
 
-  readonly start = computed(() => this.state().start);
-  readonly stops = computed(() => resolveItinerary(this.state().stopIds, this.attractionsById()));
-  readonly resolvedStart = computed(() =>
-    resolveStart(this.state().start, this.startPresets, this.attractionsById()),
-  );
+  readonly resolvedStart = computed<ResolvedStart>(() => {
+    const location = this.sessionLocation();
+    if (location) {
+      return { type: 'current', label: 'Your current location', point: location };
+    }
+    const start = this.view()?.start;
+    return start && start.label
+      ? toResolvedStart(start)
+      : { type: 'preset', label: 'Starting point' };
+  });
+
+  readonly stops = computed(() => numberStops(this.view()?.stops.map((s) => s.attraction) ?? []));
   readonly count = computed(() => this.stops().length);
   readonly isFull = computed(() => this.count() >= MAX_ITINERARY_STOPS);
   readonly summary = computed(() => summarizeItinerary(this.stops()));
@@ -67,164 +107,277 @@ export class TripPlanService {
     () => new Map(this.stops().map((s) => [s.attraction.id, s.order] as const)),
   );
 
+  private restoreRequested = false;
+
   constructor() {
-    // Restore after the first render so hydrated markup matches the server-rendered page.
-    afterNextRender(() => this.restore());
+    // The plan lives in this browser's guest reference, so load it only in the browser.
+    afterNextRender(() => {
+      if (!this.restoreRequested) {
+        void this.restore();
+      }
+    });
   }
 
-  isInPlan(attractionId: string): boolean {
+  isInPlan(attractionId: number): boolean {
     return this.orderById().has(attractionId);
   }
 
   /** 1-based stop number of an attraction in the plan, if present. */
-  stopNumberOf(attractionId: string): number | undefined {
+  stopNumberOf(attractionId: number): number | undefined {
     return this.orderById().get(attractionId);
   }
 
-  add(attractionId: string): AddToPlanResult {
+  add(attraction: AttractionSummary): AddToPlanResult {
     const ids = this.currentIds();
-    if (ids.includes(attractionId)) {
+    if (ids.includes(attraction.id)) {
       return 'duplicate';
     }
     if (ids.length >= MAX_ITINERARY_STOPS) {
       return 'full';
     }
-    this.commitIds([...ids, attractionId]);
+    void this.save(
+      (it) => ({ ...it, stops: [...it.stops, { order: it.stops.length + 1, attraction }] }),
+      (ref) => this.api.addStop(ref, attraction.id),
+      `${attraction.name} couldn’t be added to your plan.`,
+    );
     return 'added';
   }
 
-  /** Adds several attractions in the given order, skipping duplicates. Returns how many were added. */
-  addMany(attractionIds: readonly string[]): number {
-    let added = 0;
-    for (const id of attractionIds) {
-      if (this.add(id) === 'added') {
-        added++;
-      }
-    }
-    return added;
+  /** Adds the example day (demo content). Resolves to how many stops were added. */
+  async addSampleDay(): Promise<number> {
+    const before = this.count();
+    const saved = await this.save(
+      null,
+      (ref) => this.api.addStopsBySlug(ref, SAMPLE_DAY_SLUGS),
+      'The sample day couldn’t be added.',
+    );
+    return saved ? this.count() - before : 0;
   }
 
   /** Removes a stop and returns its former index (or -1), which `insertAt` can use for undo. */
-  remove(attractionId: string): number {
-    if (!this.state().stopIds.includes(attractionId)) {
+  remove(attractionId: number): number {
+    const index = this.currentIds().indexOf(attractionId);
+    if (index === -1) {
       return -1;
     }
-    // The attraction may already be gone from the data source (e.g. deleted by the admin
-    // demo), in which case it is not in currentIds() but must still be pruned from storage.
-    const ids = this.currentIds();
-    this.commitIds(ids.filter((id) => id !== attractionId));
-    return ids.indexOf(attractionId);
+    void this.save(
+      (it) => ({ ...it, stops: it.stops.filter((s) => s.attraction.id !== attractionId) }),
+      (ref) => this.api.removeStop(ref, attractionId),
+      'That stop couldn’t be removed.',
+    );
+    return index;
   }
 
-  insertAt(attractionId: string, index: number): void {
-    const ids = this.currentIds().filter((id) => id !== attractionId);
-    if (ids.length >= MAX_ITINERARY_STOPS) {
+  insertAt(attraction: AttractionSummary, index: number): void {
+    const ids = this.currentIds();
+    if (ids.includes(attraction.id) || ids.length >= MAX_ITINERARY_STOPS) {
       return;
     }
-    ids.splice(Math.max(0, Math.min(index, ids.length)), 0, attractionId);
-    this.commitIds(ids);
+    const position = Math.max(0, Math.min(index, ids.length));
+    void this.save(
+      (it) => {
+        const stops = [...it.stops];
+        stops.splice(position, 0, { order: position + 1, attraction });
+        return { ...it, stops };
+      },
+      (ref) => this.api.addStop(ref, attraction.id, position),
+      `${attraction.name} couldn’t be put back in your plan.`,
+    );
   }
 
   move(fromIndex: number, toIndex: number): void {
     const ids = this.currentIds();
     const next = moveItem(ids, fromIndex, toIndex);
     if (next.some((id, i) => id !== ids[i])) {
-      this.commitIds(next);
+      this.setOrder(next);
     }
   }
 
-  /** Replaces the order. Only call after the tourist has explicitly accepted the new order. */
-  setOrder(attractionIds: readonly string[]): void {
-    const current = new Set(this.currentIds());
-    const next = attractionIds.filter((id) => current.has(id));
-    if (next.length === current.size) {
-      this.commitIds(next);
+  /** Replaces the order. Only call after the tourist has explicitly chosen the new order. */
+  setOrder(attractionIds: readonly number[]): void {
+    const current = this.view()?.stops ?? [];
+    const byId = new Map(current.map((s) => [s.attraction.id, s] as const));
+    if (attractionIds.length !== current.length || !attractionIds.every((id) => byId.has(id))) {
+      return;
     }
+    const order = [...attractionIds];
+    void this.save(
+      (it) => ({ ...it, stops: order.map((id) => byId.get(id)!) }),
+      (ref) => this.api.reorder(ref, order),
+      'Your new order couldn’t be saved.',
+    );
   }
 
   clear(): void {
-    this.commitIds([]);
+    void this.save(
+      (it) => ({ ...it, stops: [] }),
+      (ref) => this.api.clear(ref),
+      'Your plan couldn’t be cleared.',
+    );
   }
 
-  /** Adds the example day (demo content) to the plan. Returns how many stops were added. */
-  addSampleDay(): number {
-    return this.addMany(MOCK_SAMPLE_ITINERARY_IDS);
-  }
-
-  setStart(start: StartPoint): void {
-    this.commit({ ...this.state(), start });
-  }
-
-  restore(): void {
-    const parsed = parseTripPlan(this.storage.read(TRIP_PLAN_STORAGE_KEY));
-    if (parsed) {
-      this.state.set(parsed);
-    } else {
-      this.storage.remove(TRIP_PLAN_STORAGE_KEY);
+  /** Resolves to false if the change couldn't be saved (the tourist has been told why). */
+  async setStart(start: StartPoint): Promise<boolean> {
+    if (start.type === 'current') {
+      this.sessionLocation.set({ latitude: start.latitude, longitude: start.longitude });
+      return true;
     }
-    this.restored.set(true);
-  }
-
-  /** IDs in display order, ignoring any that no longer match an attraction. */
-  private currentIds(): string[] {
-    if (this.attractions().length === 0) {
-      return [...this.state().stopIds];
+    const request: UpdateStartRequest =
+      start.type === 'preset'
+        ? { type: 'preset', presetSlug: start.presetId }
+        : start.type === 'attraction'
+          ? { type: 'attraction', attractionId: start.attractionId }
+          : { type: 'custom', query: start.query };
+    const saved = await this.save(
+      null,
+      (ref) => this.api.updateStart(ref, request),
+      'Your starting point couldn’t be changed.',
+    );
+    if (saved) {
+      this.sessionLocation.set(null);
     }
-    return this.stops().map((s) => s.attraction.id);
+    return saved;
   }
 
-  private commitIds(stopIds: string[]): void {
-    this.commit({ ...this.state(), stopIds });
+  /** Loads (or reloads) the saved plan from the API. */
+  restore(): Promise<void> {
+    this.restoreRequested = true;
+    return this.enqueue(async () => {
+      this.storage.remove(LEGACY_STORAGE_KEY);
+      if (!this.view()) {
+        // Show "loading" rather than an empty plan while a retry is in progress.
+        this.restored.set(false);
+      }
+      this.loadError.set(null);
+      this.ref = parseGuestPlanRef(this.storage.read(GUEST_PLAN_STORAGE_KEY));
+      if (!this.ref) {
+        this.setConfirmed(null);
+      } else {
+        try {
+          this.setConfirmed(await firstValueFrom(this.api.get(this.ref)));
+        } catch (error) {
+          if (isPlanGone(error)) {
+            this.forgetPlan();
+          } else {
+            this.loadError.set(apiErrorMessage(error, 'We couldn’t load your saved plan.'));
+          }
+        }
+      }
+      this.restored.set(true);
+    });
   }
 
-  private commit(next: TripPlanState): void {
-    this.state.set(next);
-    // The device location is used for this session only and is never persisted.
-    const persisted: TripPlanState =
-      next.start.type === 'current' ? { ...next, start: DEFAULT_START } : next;
-    this.storage.write(TRIP_PLAN_STORAGE_KEY, persisted);
+  private currentIds(): number[] {
+    return this.view()?.stops.map((s) => s.attraction.id) ?? [];
+  }
+
+  /**
+   * Applies `change` to the visible plan straight away (if given), then sends `request` once all
+   * earlier changes have been saved.
+   */
+  private save(
+    change: Change | null,
+    request: (ref: GuestPlanRef) => Observable<Itinerary>,
+    failureMessage: string,
+  ): Promise<boolean> {
+    if (change) {
+      this.view.update((it) => change(it ?? emptyItinerary()));
+    }
+    this.pending.update((n) => n + 1);
+
+    return this.enqueue(async () => {
+      try {
+        const ref = await this.ensurePlan();
+        this.confirmed.set(await firstValueFrom(request(ref)));
+        this.loadError.set(null);
+        return true;
+      } catch (error) {
+        this.reportFailure(error, failureMessage);
+        return false;
+      } finally {
+        this.pending.update((n) => n - 1);
+        if (this.pending() === 0) {
+          this.view.set(this.confirmed());
+        }
+      }
+    });
+  }
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(task);
+    this.queue = result.catch(() => undefined);
+    return result;
+  }
+
+  private async ensurePlan(): Promise<GuestPlanRef> {
+    if (this.ref) {
+      return this.ref;
+    }
+    const created = await firstValueFrom(this.api.create());
+    this.ref = { id: created.itinerary.id, token: created.accessToken };
+    this.storage.write(GUEST_PLAN_STORAGE_KEY, { version: 2, ...this.ref });
+    this.confirmed.set(created.itinerary);
+    return this.ref;
+  }
+
+  private setConfirmed(itinerary: Itinerary | null): void {
+    this.confirmed.set(itinerary);
+    if (this.pending() === 0) {
+      this.view.set(itinerary);
+    }
+  }
+
+  private forgetPlan(): void {
+    this.ref = null;
+    this.storage.remove(GUEST_PLAN_STORAGE_KEY);
+    this.confirmed.set(null);
+  }
+
+  private reportFailure(error: unknown, fallback: string): void {
+    if (isPlanGone(error)) {
+      this.forgetPlan();
+      this.toast.show('Your saved plan could no longer be found. Please add your places again.', {
+        tone: 'error',
+      });
+      return;
+    }
+    const problem = apiProblem(error);
+    const message = isUnreachable(error)
+      ? `${fallback} We couldn’t reach the server — please check your connection and try again.`
+      : hasStatus(error, 409) || hasStatus(error, 400)
+        ? (problem?.detail ?? fallback)
+        : `${fallback} Please try again.`;
+    this.toast.show(message, { tone: 'error' });
   }
 }
 
-/** Validates stored data; returns null for anything missing, outdated or malformed. */
-export function parseTripPlan(raw: unknown): TripPlanState | null {
+function isPlanGone(error: unknown): boolean {
+  const code = apiErrorCode(error);
+  return code === 'itinerary-not-found' || code === 'itinerary-token-required';
+}
+
+function emptyItinerary(): Itinerary {
+  return {
+    id: '',
+    start: { type: 'preset', label: '', coordinatesApproximate: false },
+    stops: [],
+    maxStops: MAX_ITINERARY_STOPS,
+    updatedAtUtc: '',
+  };
+}
+
+/** Validates the stored guest reference; returns null for anything missing or malformed. */
+export function parseGuestPlanRef(raw: unknown): GuestPlanRef | null {
   if (typeof raw !== 'object' || raw === null) {
     return null;
   }
   const value = raw as Record<string, unknown>;
-  if (value['version'] !== 1 || !Array.isArray(value['stopIds'])) {
-    return null;
-  }
-  const stopIds = [
-    ...new Set(value['stopIds'].filter((id): id is string => typeof id === 'string' && !!id)),
-  ].slice(0, MAX_ITINERARY_STOPS);
-
-  return { version: 1, stopIds, start: parseStart(value['start']) };
-}
-
-function parseStart(raw: unknown): StartPoint {
-  if (typeof raw !== 'object' || raw === null) {
-    return DEFAULT_START;
-  }
-  const value = raw as Record<string, unknown>;
-  switch (value['type']) {
-    case 'preset':
-      return MOCK_START_PRESETS.some((p) => p.id === value['presetId'])
-        ? { type: 'preset', presetId: value['presetId'] as string }
-        : DEFAULT_START;
-    case 'attraction':
-      return typeof value['attractionId'] === 'string'
-        ? { type: 'attraction', attractionId: value['attractionId'] }
-        : DEFAULT_START;
-    case 'custom': {
-      const query = typeof value['query'] === 'string' ? value['query'].trim().slice(0, 200) : '';
-      return query ? { type: 'custom', query } : DEFAULT_START;
-    }
-    case 'current':
-      return isValidLatitude(value['latitude']) && isValidLongitude(value['longitude'])
-        ? { type: 'current', latitude: value['latitude'], longitude: value['longitude'] }
-        : DEFAULT_START;
-    default:
-      return DEFAULT_START;
-  }
+  const { id, token } = value;
+  return value['version'] === 2 &&
+    typeof id === 'string' &&
+    GUID_PATTERN.test(id) &&
+    typeof token === 'string' &&
+    TOKEN_PATTERN.test(token)
+    ? { id, token }
+    : null;
 }

@@ -1,11 +1,10 @@
-import { Attraction } from '../models/attraction.model';
+import { AttractionSummary } from '../models/attraction.model';
 import {
   GeoPoint,
+  ItineraryStartDto,
   ItineraryStop,
   ItinerarySummary,
   ResolvedStart,
-  StartPoint,
-  StartPreset,
 } from '../models/trip-plan.model';
 import { straightLineDistanceKm } from './geo';
 
@@ -17,15 +16,8 @@ export const MOBILE_BROWSER_WAYPOINT_LIMIT = 3;
 
 const GOOGLE_MAPS_DIRECTIONS_BASE = 'https://www.google.com/maps/dir/';
 
-/** Resolves stored stop IDs into ordered stops, skipping IDs that no longer exist. */
-export function resolveItinerary(
-  stopIds: readonly string[],
-  attractionsById: ReadonlyMap<string, Attraction>,
-): ItineraryStop[] {
-  const attractions = stopIds
-    .map((id) => attractionsById.get(id))
-    .filter((a): a is Attraction => a !== undefined);
-
+/** Numbers attractions in the given (visiting) order and marks the last one as final. */
+export function numberStops(attractions: readonly AttractionSummary[]): ItineraryStop[] {
   return attractions.map((attraction, index) => ({
     order: index + 1,
     isFinal: index === attractions.length - 1,
@@ -33,40 +25,18 @@ export function resolveItinerary(
   }));
 }
 
-export function resolveStart(
-  start: StartPoint,
-  presets: readonly StartPreset[],
-  attractionsById: ReadonlyMap<string, Attraction>,
-): ResolvedStart {
-  switch (start.type) {
-    case 'preset': {
-      const preset = presets.find((p) => p.id === start.presetId) ?? presets[0];
-      return {
-        type: 'preset',
-        label: preset.label,
-        point: { latitude: preset.latitude, longitude: preset.longitude },
-      };
-    }
-    case 'attraction': {
-      const attraction = attractionsById.get(start.attractionId);
-      if (!attraction) {
-        return resolveStart({ type: 'preset', presetId: presets[0].id }, presets, attractionsById);
-      }
-      return {
-        type: 'attraction',
-        label: attraction.name,
-        point: { latitude: attraction.latitude, longitude: attraction.longitude },
-      };
-    }
-    case 'custom':
-      return { type: 'custom', label: start.query, query: start.query };
-    case 'current':
-      return {
-        type: 'current',
-        label: 'Your current location',
-        point: { latitude: start.latitude, longitude: start.longitude },
-      };
-  }
+/** Converts the API's resolved start into the shape the map and directions link use. */
+export function toResolvedStart(start: ItineraryStartDto): ResolvedStart {
+  const point =
+    start.latitude !== undefined && start.longitude !== undefined
+      ? { latitude: start.latitude, longitude: start.longitude }
+      : undefined;
+  return {
+    type: start.type,
+    label: start.label,
+    point,
+    query: point ? undefined : (start.query ?? start.label),
+  };
 }
 
 function toLatLng(point: GeoPoint): string {
@@ -154,12 +124,12 @@ export function moveItem<T>(items: readonly T[], from: number, to: number): T[] 
 export function suggestShorterOrder(
   start: GeoPoint | undefined,
   stops: readonly ItineraryStop[],
-): Attraction[] {
+): AttractionSummary[] {
   const remaining = stops.map((s) => s.attraction);
   if (remaining.length < 3) {
     return remaining;
   }
-  const ordered: Attraction[] = [];
+  const ordered: AttractionSummary[] = [];
   let current: GeoPoint;
   if (start) {
     current = start;

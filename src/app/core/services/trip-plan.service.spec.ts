@@ -1,98 +1,244 @@
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { AttractionService } from './attraction.service';
-import { MockAttractionService } from './mock-attraction.service';
-import { TRIP_PLAN_STORAGE_KEY, TripPlanService, parseTripPlan } from './trip-plan.service';
+import { provideRouter } from '@angular/router';
+import {
+  BUDDHA,
+  GARDENS,
+  LAKE,
+  PLAN_ID,
+  PLAN_TOKEN,
+  TEMPLE,
+  itinerary,
+} from '../../../testing/fixtures';
+import { apiUrl } from '../api/api';
+import { ToastService } from './toast.service';
+import { GUEST_PLAN_STORAGE_KEY, TripPlanService, parseGuestPlanRef } from './trip-plan.service';
+
+const planUrl = apiUrl(`/itineraries/${PLAN_ID}`);
 
 describe('TripPlanService', () => {
   let plan: TripPlanService;
+  let http: HttpTestingController;
+  let toast: ToastService;
+
+  /** Saves run on a promise queue, so requests appear after a few microtasks. */
+  async function expectRequest(method: string, url: string): Promise<TestRequest> {
+    for (let i = 0; i < 20; i++) {
+      const [request] = http.match((r) => r.method === method && r.urlWithParams === url);
+      if (request) {
+        return request;
+      }
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+    throw new Error(`Expected ${method} ${url}`);
+  }
+
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 5; i++) {
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+  }
+
+  function storeRef(): void {
+    localStorage.setItem(
+      GUEST_PLAN_STORAGE_KEY,
+      JSON.stringify({ version: 2, id: PLAN_ID, token: PLAN_TOKEN }),
+    );
+  }
 
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [{ provide: AttractionService, useExisting: MockAttractionService }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     plan = TestBed.inject(TripPlanService);
-    plan.restore();
+    http = TestBed.inject(HttpTestingController);
+    toast = TestBed.inject(ToastService);
   });
 
-  it('adds stops in order and prevents duplicates', () => {
-    expect(plan.add('att-002')).toBe('added');
-    expect(plan.add('att-001')).toBe('added');
-    expect(plan.add('att-002')).toBe('duplicate');
-    expect(plan.stops().map((s) => s.attraction.id)).toEqual(['att-002', 'att-001']);
+  afterEach(() => http.verify());
+
+  it('creates a guest plan on the first add and stores only its reference', async () => {
+    await plan.restore();
+    expect(plan.restored()).toBe(true);
+
+    expect(plan.add(LAKE)).toBe('added');
+    expect(plan.count()).toBe(1);
+
+    (await expectRequest('POST', apiUrl('/itineraries'))).flush({
+      accessToken: PLAN_TOKEN,
+      itinerary: itinerary([]),
+    });
+    const add = await expectRequest('POST', `${planUrl}/stops`);
+    expect(add.request.headers.get('X-Itinerary-Token')).toBe(PLAN_TOKEN);
+    expect(add.request.body).toEqual({ attractionId: LAKE.id, position: undefined });
+    add.flush(itinerary([LAKE]));
+    await settle();
+
+    expect(plan.stops().map((s) => s.attraction.id)).toEqual([LAKE.id]);
+    const stored = JSON.parse(localStorage.getItem(GUEST_PLAN_STORAGE_KEY)!);
+    expect(stored).toEqual({ version: 2, id: PLAN_ID, token: PLAN_TOKEN });
+    expect(JSON.stringify(stored)).not.toContain(LAKE.name);
+  });
+
+  it('restores the saved plan in the server’s order and prevents duplicates', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE, TEMPLE]));
+    await restoring;
+
+    expect(plan.stops().map((s) => s.attraction.id)).toEqual([LAKE.id, TEMPLE.id]);
+    expect(plan.resolvedStart().label).toBe('Kandy City Centre');
+    expect(plan.add(LAKE)).toBe('duplicate');
+  });
+
+  it('sends the full new order and keeps the directions URL in sync', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE, TEMPLE, BUDDHA, GARDENS]));
+    await restoring;
+
+    plan.move(3, 0);
+    expect(plan.stops().map((s) => s.attraction.id)).toEqual([
+      GARDENS.id,
+      LAKE.id,
+      TEMPLE.id,
+      BUDDHA.id,
+    ]);
+
+    const reorder = await expectRequest('PUT', `${planUrl}/stops/order`);
+    expect(reorder.request.body).toEqual({
+      attractionIds: [GARDENS.id, LAKE.id, TEMPLE.id, BUDDHA.id],
+    });
+    reorder.flush(itinerary([GARDENS, LAKE, TEMPLE, BUDDHA]));
+    await settle();
+
+    const url = new URL(plan.directionsUrl()!);
+    expect(url.searchParams.get('destination')).toBe(
+      `${BUDDHA.latitude.toFixed(6)},${BUDDHA.longitude.toFixed(6)}`,
+    );
+    expect(url.searchParams.get('waypoints')!.split('|')[0]).toBe(
+      `${GARDENS.latitude.toFixed(6)},${GARDENS.longitude.toFixed(6)}`,
+    );
+  });
+
+  it('rolls back to the saved plan and explains when a change fails', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE, TEMPLE]));
+    await restoring;
+
+    const index = plan.remove(LAKE.id);
+    expect(index).toBe(0);
+    expect(plan.count()).toBe(1);
+
+    (await expectRequest('DELETE', `${planUrl}/stops/${LAKE.id}`)).error(
+      new ProgressEvent('error'),
+      {
+        status: 0,
+      },
+    );
+    await settle();
+
+    expect(plan.stops().map((s) => s.attraction.id)).toEqual([LAKE.id, TEMPLE.id]);
+    expect(toast.toasts().at(-1)?.tone).toBe('error');
+    expect(toast.toasts().at(-1)?.message).toContain('couldn’t reach the server');
+  });
+
+  it('undoes a removal by inserting at the original position', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE, TEMPLE, GARDENS]));
+    await restoring;
+
+    plan.insertAt(BUDDHA, 1);
+    expect(plan.stops().map((s) => s.attraction.id)).toEqual([
+      LAKE.id,
+      BUDDHA.id,
+      TEMPLE.id,
+      GARDENS.id,
+    ]);
+    const add = await expectRequest('POST', `${planUrl}/stops`);
+    expect(add.request.body).toEqual({ attractionId: BUDDHA.id, position: 1 });
+    add.flush(itinerary([LAKE, BUDDHA, TEMPLE, GARDENS]));
+    await settle();
+  });
+
+  it('enforces the stop limit before calling the API', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    const ten = Array.from({ length: 10 }, (_, i) => ({ ...LAKE, id: 100 + i }));
+    (await expectRequest('GET', planUrl)).flush(itinerary(ten));
+    await restoring;
+
+    expect(plan.add(TEMPLE)).toBe('full');
+  });
+
+  it('keeps the device location in memory only', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE]));
+    await restoring;
+
+    await plan.setStart({ type: 'current', latitude: 7.3, longitude: 80.6 });
+
+    expect(plan.resolvedStart()).toEqual({
+      type: 'current',
+      label: 'Your current location',
+      point: { latitude: 7.3, longitude: 80.6 },
+    });
+    expect(localStorage.getItem(GUEST_PLAN_STORAGE_KEY)).not.toContain('80.6');
+  });
+
+  it('shows a load error but keeps the reference when the API is unreachable', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).error(new ProgressEvent('error'), { status: 0 });
+    await restoring;
+
+    expect(plan.loadError()).toContain('couldn’t reach');
+    expect(localStorage.getItem(GUEST_PLAN_STORAGE_KEY)).not.toBeNull();
+
+    // Retrying shows "loading" (not an empty plan) until the saved plan arrives.
+    const retrying = plan.restore();
+    const retry = await expectRequest('GET', planUrl);
+    expect(plan.restored()).toBe(false);
+    expect(plan.loadError()).toBeNull();
+    retry.flush(itinerary([LAKE, TEMPLE]));
+    await retrying;
+    expect(plan.restored()).toBe(true);
     expect(plan.count()).toBe(2);
   });
 
-  it('reorders, removes and keeps the directions URL in sync', () => {
-    plan.addMany(['att-002', 'att-001', 'att-004', 'att-003']);
-    plan.move(3, 0);
-    expect(plan.stops().map((s) => s.attraction.id)).toEqual([
-      'att-003',
-      'att-002',
-      'att-001',
-      'att-004',
-    ]);
-
-    plan.remove('att-002');
-    expect(plan.stops().map((s) => s.order)).toEqual([1, 2, 3]);
-    const destination = new URL(plan.directionsUrl()!).searchParams.get('destination');
-    const final = plan.stops().at(-1)!.attraction;
-    expect(destination).toBe(`${final.latitude.toFixed(6)},${final.longitude.toFixed(6)}`);
-  });
-
-  it('can undo a removal at the original position', () => {
-    plan.addMany(['att-001', 'att-002', 'att-003']);
-    const index = plan.remove('att-002');
-    plan.insertAt('att-002', index);
-    expect(plan.stops().map((s) => s.attraction.id)).toEqual(['att-001', 'att-002', 'att-003']);
-  });
-
-  it('prunes a stop whose attraction was deleted from the data source', () => {
-    const data = TestBed.inject(MockAttractionService);
-    plan.addMany(['att-001', 'att-002']);
-    data.deleteAttraction('att-002').subscribe();
-    plan.remove('att-002');
-    expect(JSON.parse(localStorage.getItem(TRIP_PLAN_STORAGE_KEY)!).stopIds).toEqual(['att-001']);
-    data.resetDemoData();
-  });
-
-  it('enforces the stop limit', () => {
-    const ids = Array.from(
-      { length: plan.maxStops },
-      (_, i) => `att-${String(i + 1).padStart(3, '0')}`,
+  it('forgets a plan the server no longer has', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(
+      { status: 404, code: 'itinerary-not-found', detail: 'We couldn’t find that saved plan.' },
+      { status: 404, statusText: 'Not Found' },
     );
-    plan.addMany(ids);
-    expect(plan.add('att-015')).toBe('full');
-  });
+    await restoring;
 
-  it('persists to localStorage and restores the same order', () => {
-    plan.addMany(['att-004', 'att-001']);
-    const stored = JSON.parse(localStorage.getItem(TRIP_PLAN_STORAGE_KEY)!);
-    expect(stored.stopIds).toEqual(['att-004', 'att-001']);
-  });
-
-  it('does not persist the device location', () => {
-    plan.setStart({ type: 'current', latitude: 7.3, longitude: 80.6 });
-    const stored = JSON.parse(localStorage.getItem(TRIP_PLAN_STORAGE_KEY)!);
-    expect(stored.start.type).toBe('preset');
+    expect(plan.count()).toBe(0);
+    expect(plan.loadError()).toBeNull();
+    expect(localStorage.getItem(GUEST_PLAN_STORAGE_KEY)).toBeNull();
   });
 });
 
-describe('parseTripPlan', () => {
-  it('rejects missing or malformed data', () => {
-    expect(parseTripPlan(null)).toBeNull();
-    expect(parseTripPlan('nonsense')).toBeNull();
-    expect(parseTripPlan({ version: 2, stopIds: [] })).toBeNull();
-    expect(parseTripPlan({ version: 1, stopIds: 'att-001' })).toBeNull();
-  });
-
-  it('cleans up stop IDs and falls back to the default start', () => {
-    const parsed = parseTripPlan({
-      version: 1,
-      stopIds: ['att-001', 42, 'att-001', '', 'att-002'],
-      start: { type: 'preset', presetId: 'nowhere' },
+describe('parseGuestPlanRef', () => {
+  it('accepts only a well-formed reference', () => {
+    expect(parseGuestPlanRef({ version: 2, id: PLAN_ID, token: PLAN_TOKEN })).toEqual({
+      id: PLAN_ID,
+      token: PLAN_TOKEN,
     });
-    expect(parsed?.stopIds).toEqual(['att-001', 'att-002']);
-    expect(parsed?.start).toEqual({ type: 'preset', presetId: 'kandy-city-centre' });
+    expect(parseGuestPlanRef(null)).toBeNull();
+    expect(parseGuestPlanRef({ version: 1, stopIds: ['att-001'] })).toBeNull();
+    expect(parseGuestPlanRef({ version: 2, id: 'not-a-guid', token: PLAN_TOKEN })).toBeNull();
+    expect(parseGuestPlanRef({ version: 2, id: PLAN_ID, token: 'short' })).toBeNull();
   });
 });
