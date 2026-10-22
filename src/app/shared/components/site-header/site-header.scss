@@ -1,0 +1,215 @@
+:host {
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  display: block;
+}
+
+.header {
+  background: rgb(253 251 246 / 92%);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: saturate(1.4) blur(10px);
+}
+
+.header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--header-height);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-forest-900);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-forest-900);
+  }
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.brand__name {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.brand__sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: var(--color-gold-700);
+}
+
+.nav__list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-700);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    background: var(--color-forest-50);
+    color: var(--color-forest-800);
+  }
+}
+
+.nav__link--active {
+  color: var(--color-forest-800);
+  background: var(--color-forest-100);
+}
+
+.nav__link--plan {
+  margin-left: var(--space-2);
+  border: 1.5px solid var(--color-forest-700);
+  color: var(--color-forest-800);
+
+  &.nav__link--active,
+  &:hover {
+    background: var(--color-forest-700);
+    color: var(--color-white);
+
+    .count {
+      background: var(--color-gold-400);
+      color: var(--color-forest-900);
+    }
+  }
+}
+
+.count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-forest-700);
+  color: var(--color-white);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.header__mobile-actions {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.plan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0.4rem 0.6rem 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-forest-700);
+  color: var(--color-white);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--color-forest-800);
+    color: var(--color-white);
+  }
+
+  .count {
+    background: var(--color-gold-400);
+    color: var(--color-forest-900);
+  }
+}
+
+.menu-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-forest-900);
+}
+
+@media (max-width: 860px) {
+  .header__mobile-actions {
+    display: flex;
+  }
+
+  .nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: none;
+    padding: var(--space-3) var(--container-pad) var(--space-5);
+    background: var(--color-cream-50);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav--open {
+    display: block;
+  }
+
+  .nav__list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav__link {
+    width: 100%;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+  }
+
+  .nav__link--plan {
+    margin: var(--space-2) 0 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand__sub {
+    display: none;
+  }
+}
+
+@media (max-width: 440px) {
+  // Keep the label for screen readers while saving space.
+  .plan-pill__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

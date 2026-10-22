@@ -1,0 +1,53 @@
+:host {
+  display: inline-flex;
+}
+
+:host:has(.btn--block) {
+  display: flex;
+}
+
+.plan-btn--added {
+  --btn-bg: var(--color-forest-100);
+  --btn-fg: var(--color-forest-800);
+  --btn-border: var(--color-forest-200);
+  position: relative;
+}
+
+.plan-btn__state,
+.plan-btn__hover {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.plan-btn__hover {
+  position: absolute;
+  inset: 0;
+  justify-content: center;
+  opacity: 0;
+}
+
+@mixin show-remove {
+  --btn-bg: var(--color-danger-bg);
+  --btn-fg: var(--color-danger);
+  --btn-border: var(--color-danger);
+
+  .plan-btn__state {
+    opacity: 0;
+  }
+
+  .plan-btn__hover {
+    opacity: 1;
+  }
+}
+
+// Only swap to "Remove" on real hover devices so a tap on mobile doesn't leave it showing.
+@media (hover: hover) {
+  .plan-btn--added:hover {
+    @include show-remove;
+  }
+}
+
+.plan-btn--added:focus-visible {
+  @include show-remove;
+}

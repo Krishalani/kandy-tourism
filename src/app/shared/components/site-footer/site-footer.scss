@@ -1,0 +1,127 @@
+.footer {
+  margin-top: auto;
+  padding-top: var(--space-16);
+  background: var(--color-forest-900);
+  color: #d6e4da;
+  font-size: var(--text-sm);
+
+  a {
+    color: #eef5f0;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-gold-400);
+      text-decoration: underline;
+    }
+  }
+
+  :focus-visible {
+    outline-color: var(--color-gold-400);
+  }
+}
+
+.footer__grid {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(3, 1fr);
+  gap: var(--space-10);
+  padding-bottom: var(--space-12);
+}
+
+.footer__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.footer__brand p {
+  max-width: 42ch;
+}
+
+.footer__note {
+  color: #b9cdbf;
+}
+
+.footer__tag {
+  display: inline-block;
+  margin-right: var(--space-1);
+  padding: 0.05rem 0.45rem;
+  border: 1px solid rgb(210 162 76 / 70%);
+  border-radius: var(--radius-sm);
+  color: var(--color-gold-400);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.footer__heading {
+  margin-bottom: var(--space-4);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footer__col ul {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer__contact li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+
+  app-icon {
+    margin-top: 3px;
+    color: var(--color-gold-400);
+  }
+}
+
+.footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-6);
+  padding-block: var(--space-6);
+  border-top: 1px solid rgb(255 255 255 / 12%);
+  color: #a9bfb1;
+  font-size: var(--text-xs);
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 900px) {
+  .footer__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+}
