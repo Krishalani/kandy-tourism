@@ -55,7 +55,7 @@ import { Logo } from '../logo/logo';
       </div>
 
       <div class="container footer__bottom">
-        <p>© {{ year }} {{ site.name }}. A frontend prototype for planning purposes only.</p>
+        <p>© {{ year }} {{ site.name }}. A prototype for planning purposes only.</p>
         <p>
           Photos from
           <a href="https://commons.wikimedia.org" target="_blank" rel="noopener"

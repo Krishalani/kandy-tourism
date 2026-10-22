@@ -69,7 +69,7 @@
       >
         All categories
       </button>
-      @for (c of categories; track c.id) {
+      @for (c of categories(); track c.id) {
         <button
           type="button"
           class="chip"
@@ -98,7 +98,7 @@
     <app-loading-state label="Loading attractions" [count]="6" />
   } @else if (state.status === 'error') {
     <app-error-state [message]="state.message" [retryable]="true" (retry)="retry()" />
-  } @else if (state.data.length === 0) {
+  } @else if (state.data.items.length === 0) {
     <app-empty-state
       icon="search"
       title="No attractions match your filters"
@@ -108,10 +108,27 @@
     </app-empty-state>
   } @else {
     <ul class="card-grid">
-      @for (attraction of state.data; track attraction.id) {
+      @for (attraction of state.data.items; track attraction.id) {
         <li><app-attraction-card [attraction]="attraction" /></li>
       }
     </ul>
+    @if (state.data.hasNextPage || state.data.loadMoreError) {
+      <div class="load-more">
+        @if (state.data.loadMoreError) {
+          <p class="field__error" role="alert">
+            <app-icon name="alert" [size]="16" /> {{ state.data.loadMoreError }}
+          </p>
+        }
+        <button type="button" class="btn" [disabled]="state.data.loadingMore" (click)="showMore()">
+          @if (state.data.loadingMore) {
+            Loading more…
+          } @else {
+            <app-icon name="plus" [size]="18" />
+            {{ state.data.loadMoreError ? 'Try again' : 'Show more attractions' }}
+          }
+        </button>
+      </div>
+    }
   }
 </section>
 

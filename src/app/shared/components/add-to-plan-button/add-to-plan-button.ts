@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
-import { Attraction } from '../../../core/models/attraction.model';
+import { AttractionSummary } from '../../../core/models/attraction.model';
 import { ToastService } from '../../../core/services/toast.service';
 import { TripPlanService } from '../../../core/services/trip-plan.service';
 import { Icon } from '../icon/icon';
@@ -49,7 +49,7 @@ import { Icon } from '../icon/icon';
   `,
 })
 export class AddToPlanButton {
-  readonly attraction = input.required<Attraction>();
+  readonly attraction = input.required<AttractionSummary>();
   readonly size = input<'sm' | 'md' | 'lg'>('md');
   readonly block = input(false);
   /** `toggle`: compact "Added" state (cards). `explicit`: a labelled remove action (details). */
@@ -69,12 +69,12 @@ export class AddToPlanButton {
       const index = this.plan.remove(attraction.id);
       this.toast.show(`${attraction.name} was removed from My Plan.`, {
         tone: 'info',
-        action: { label: 'Undo', run: () => this.plan.insertAt(attraction.id, index) },
+        action: { label: 'Undo', run: () => this.plan.insertAt(attraction, index) },
       });
       return;
     }
 
-    switch (this.plan.add(attraction.id)) {
+    switch (this.plan.add(attraction)) {
       case 'added':
         this.toast.show(
           `${attraction.name} added as stop ${this.plan.stopNumberOf(attraction.id)} in My Plan.`,

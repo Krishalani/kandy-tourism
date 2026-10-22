@@ -1,7 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { ATTRACTION_CATEGORIES } from '../../core/models/attraction.model';
+import { catchError, map, of } from 'rxjs';
+import { CategoryInfo } from '../../core/models/attraction.model';
 import { AttractionService } from '../../core/services/attraction.service';
+import { CatalogService } from '../../core/services/catalog.service';
 import { SiteInfoService } from '../../core/services/site-info.service';
 import { TripPlanService } from '../../core/services/trip-plan.service';
 import { toLoadState } from '../../core/utils/load-state';
@@ -12,6 +15,8 @@ import { EmptyState } from '../../shared/components/state/empty-state';
 import { ErrorState } from '../../shared/components/state/error-state';
 import { LoadingState } from '../../shared/components/state/loading-state';
 import { ImgFallbackDirective } from '../../shared/directives/img-fallback.directive';
+
+const FEATURED_COUNT = 6;
 
 @Component({
   selector: 'app-home',
@@ -30,21 +35,26 @@ import { ImgFallbackDirective } from '../../shared/directives/img-fallback.direc
   templateUrl: './home.html',
 })
 export default class Home {
+  private readonly attractionService = inject(AttractionService);
   protected readonly site = inject(SiteInfoService);
   protected readonly plan = inject(TripPlanService);
-  protected readonly categories = ATTRACTION_CATEGORIES;
 
-  private readonly attractions = toLoadState(inject(AttractionService).getAttractions());
+  protected readonly categories = toSignal(
+    inject(CatalogService)
+      .getCategories()
+      .pipe(catchError(() => of<CategoryInfo[]>([]))),
+    { initialValue: [] as CategoryInfo[] },
+  );
 
-  protected readonly featured = computed(() => {
-    const state = this.attractions();
-    return state.status === 'ready'
-      ? { ...state, data: state.data.filter((a) => a.featured).slice(0, 6) }
-      : state;
-  });
+  protected readonly featured = toLoadState(
+    this.attractionService
+      .search({ featured: true, pageSize: FEATURED_COUNT })
+      .pipe(map((result) => result.items)),
+    'Featured attractions are unavailable right now.',
+  );
 
-  protected readonly attractionCount = computed(() => {
-    const state = this.attractions();
-    return state.status === 'ready' ? state.data.length : null;
-  });
+  protected readonly attractionCount = toSignal(
+    this.attractionService.count().pipe(catchError(() => of(null))),
+    { initialValue: null },
+  );
 }

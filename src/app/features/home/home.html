@@ -50,7 +50,7 @@
   <div class="container">
     <h2 id="categories-title" class="visually-hidden">Browse by category</h2>
     <ul class="categories__list">
-      @for (category of categories; track category.id) {
+      @for (category of categories(); track category.id) {
         <li>
           <a class="category-tile" routerLink="/explore" [queryParams]="{ category: category.id }">
             <span class="category-tile__icon"><app-icon [name]="category.icon" [size]="22" /></span>
@@ -79,7 +79,7 @@
     @if (state.status === 'loading') {
       <app-loading-state label="Loading featured attractions" [count]="3" />
     } @else if (state.status === 'error') {
-      <app-error-state message="Featured attractions are unavailable right now." />
+      <app-error-state [message]="state.message" />
     } @else if (state.data.length > 0) {
       <ul class="card-grid">
         @for (attraction of state.data; track attraction.id) {

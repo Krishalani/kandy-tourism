@@ -1,21 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Attraction } from '../../../core/models/attraction.model';
+import { AttractionSummary, categoryIcon } from '../../../core/models/attraction.model';
 import { TripPlanService } from '../../../core/services/trip-plan.service';
 import { ImgFallbackDirective } from '../../directives/img-fallback.directive';
-import { CategoryPipe } from '../../pipes/category.pipe';
 import { DurationPipe } from '../../pipes/duration.pipe';
 import { AddToPlanButton } from '../add-to-plan-button/add-to-plan-button';
 import { Icon } from '../icon/icon';
 
 @Component({
   selector: 'app-attraction-card',
-  imports: [RouterLink, Icon, AddToPlanButton, ImgFallbackDirective, CategoryPipe, DurationPipe],
+  imports: [RouterLink, Icon, AddToPlanButton, ImgFallbackDirective, DurationPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './attraction-card.scss',
   template: `
     @let a = attraction();
-    @let cat = a.category | category;
     <article class="card attraction-card" [class.attraction-card--in-plan]="stopNumber()">
       <div class="attraction-card__media">
         <img
@@ -28,7 +26,7 @@ import { Icon } from '../icon/icon';
           appImgFallback
         />
         <span class="badge badge--solid attraction-card__category">
-          <app-icon [name]="cat.icon" [size]="14" /> {{ cat.label }}
+          <app-icon [name]="categoryIcon(a.category)" [size]="14" /> {{ a.categoryName }}
         </span>
         @if (stopNumber(); as stop) {
           <span class="badge badge--gold attraction-card__stop">
@@ -63,10 +61,11 @@ import { Icon } from '../icon/icon';
   `,
 })
 export class AttractionCard {
-  readonly attraction = input.required<Attraction>();
+  readonly attraction = input.required<AttractionSummary>();
   /** Optional context line such as "1.2 km away (straight line)". */
   readonly distanceLabel = input<string>('');
 
   private readonly plan = inject(TripPlanService);
+  protected readonly categoryIcon = categoryIcon;
   protected readonly stopNumber = computed(() => this.plan.stopNumberOf(this.attraction().id));
 }

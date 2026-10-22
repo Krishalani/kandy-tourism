@@ -21,7 +21,6 @@
   </div>
 } @else {
   @let a = s.data.attraction;
-  @let cat = a.category | category;
   <article class="container details">
     <nav aria-label="Breadcrumb">
       <ol class="breadcrumb">
@@ -34,7 +33,7 @@
     <header class="details__header">
       <div class="details__badges">
         <a class="badge" routerLink="/explore" [queryParams]="{ category: a.category }">
-          <app-icon [name]="cat.icon" [size]="14" /> {{ cat.label }}
+          <app-icon [name]="categoryIcon(a.category)" [size]="14" /> {{ a.categoryName }}
         </a>
         @if (a.featured) {
           <span class="badge badge--gold"><app-icon name="star" [size]="14" /> Featured</span>

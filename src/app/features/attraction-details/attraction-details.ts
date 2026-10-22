@@ -8,8 +8,8 @@ import {
 } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { distinctUntilChanged, map, of, switchMap } from 'rxjs';
-import { GalleryImage } from '../../core/models/attraction.model';
+import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { GalleryImage, NearbyAttraction, categoryIcon } from '../../core/models/attraction.model';
 import { AttractionService } from '../../core/services/attraction.service';
 import { TripPlanService } from '../../core/services/trip-plan.service';
 import { formatCoordinate } from '../../core/utils/geo';
@@ -22,7 +22,6 @@ import { EmptyState } from '../../shared/components/state/empty-state';
 import { ErrorState } from '../../shared/components/state/error-state';
 import { LoadingState } from '../../shared/components/state/loading-state';
 import { ImgFallbackDirective } from '../../shared/directives/img-fallback.directive';
-import { CategoryPipe } from '../../shared/pipes/category.pipe';
 import { DurationPipe } from '../../shared/pipes/duration.pipe';
 
 const SITE = 'Kandy Day Trip Planner';
@@ -38,7 +37,6 @@ const SITE = 'Kandy Day Trip Planner';
     ErrorState,
     LoadingState,
     ImgFallbackDirective,
-    CategoryPipe,
     DurationPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +46,7 @@ const SITE = 'Kandy Day Trip Planner';
 export default class AttractionDetails {
   private readonly attractionService = inject(AttractionService);
   protected readonly plan = inject(TripPlanService);
+  protected readonly categoryIcon = categoryIcon;
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
 
@@ -56,12 +55,14 @@ export default class AttractionDetails {
     inject(ActivatedRoute).paramMap.pipe(
       map((params) => params.get('slug') ?? ''),
       distinctUntilChanged(),
-      switchMap((slug) => this.attractionService.getAttractionBySlug(slug)),
+      switchMap((slug) => this.attractionService.getBySlug(slug)),
       switchMap((attraction) =>
         attraction
-          ? this.attractionService
-              .getNearbyAttractions(attraction.id, 3)
-              .pipe(map((nearby) => ({ attraction, nearby })))
+          ? this.attractionService.getNearby(attraction.id, 3).pipe(
+              // Nearby places are a bonus; the page still works without them.
+              catchError(() => of<NearbyAttraction[]>([])),
+              map((nearby) => ({ attraction, nearby })),
+            )
           : of(null),
       ),
     ),

@@ -60,6 +60,13 @@
   color: var(--color-text-muted);
 }
 
+.load-more {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
 .plan-bar {
   position: sticky;
   bottom: 0;
