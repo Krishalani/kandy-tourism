@@ -1,0 +1,226 @@
+@let s = state();
+@if (s.status === 'loading') {
+  <div class="container details"><app-loading-state label="Loading attraction" [count]="1" /></div>
+} @else if (s.status === 'error') {
+  <div class="container details">
+    <app-error-state [message]="s.message">
+      <a routerLink="/explore" class="btn">Back to Explore</a>
+    </app-error-state>
+  </div>
+} @else if (!s.data) {
+  <div class="container details">
+    <app-empty-state
+      icon="map-pin"
+      title="We couldn’t find that attraction"
+      message="It may have been removed or the link may be incorrect. Browse all attractions instead."
+    >
+      <a routerLink="/explore" class="btn btn--primary">
+        <app-icon name="arrow-left" [size]="18" /> Back to Explore
+      </a>
+    </app-empty-state>
+  </div>
+} @else {
+  @let a = s.data.attraction;
+  @let cat = a.category | category;
+  <article class="container details">
+    <nav aria-label="Breadcrumb">
+      <ol class="breadcrumb">
+        <li><a routerLink="/">Home</a></li>
+        <li><a routerLink="/explore">Explore</a></li>
+        <li aria-current="page">{{ a.name }}</li>
+      </ol>
+    </nav>
+
+    <header class="details__header">
+      <div class="details__badges">
+        <a class="badge" routerLink="/explore" [queryParams]="{ category: a.category }">
+          <app-icon [name]="cat.icon" [size]="14" /> {{ cat.label }}
+        </a>
+        @if (a.featured) {
+          <span class="badge badge--gold"><app-icon name="star" [size]="14" /> Featured</span>
+        }
+      </div>
+      <h1>{{ a.name }}</h1>
+      <p class="details__address"><app-icon name="map-pin" [size]="18" /> {{ a.address }}</p>
+    </header>
+
+    <div class="gallery">
+      @let img = selectedImage();
+      <figure class="gallery__main">
+        <img
+          [src]="img.url"
+          [alt]="img.alt"
+          width="960"
+          height="640"
+          fetchpriority="high"
+          appImgFallback
+        />
+        @if (img.credit) {
+          <figcaption>
+            <app-icon name="camera" [size]="14" /> Photo:
+            <a [href]="img.credit.sourceUrl" target="_blank" rel="noopener">{{
+              img.credit.label
+            }}</a>
+          </figcaption>
+        }
+      </figure>
+      @if (images().length > 1) {
+        <ul class="gallery__thumbs" aria-label="Photo gallery">
+          @for (image of images(); track image.url; let i = $index) {
+            <li>
+              <button
+                type="button"
+                class="gallery__thumb"
+                [attr.aria-pressed]="i === selectedIndex()"
+                (click)="selectedIndex.set(i)"
+              >
+                <img
+                  [src]="image.url"
+                  alt=""
+                  width="160"
+                  height="110"
+                  loading="lazy"
+                  appImgFallback
+                />
+                <span class="visually-hidden">Show photo {{ i + 1 }}: {{ image.alt }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="details__layout">
+      <div class="details__main">
+        <section aria-labelledby="about-title">
+          <h2 id="about-title">About this place</h2>
+          @for (paragraph of a.description; track $index) {
+            <p>{{ paragraph }}</p>
+          }
+        </section>
+
+        @if (a.visitorTips.length > 0) {
+          <section class="tips" aria-labelledby="tips-title">
+            <h2 id="tips-title">Visitor tips</h2>
+            <ul>
+              @for (tip of a.visitorTips; track $index) {
+                <li><app-icon name="check" [size]="18" /> {{ tip }}</li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (a.tags.length > 0) {
+          <ul class="tags" aria-label="Tags">
+            @for (tag of a.tags; track tag) {
+              <li><app-icon name="tag" [size]="13" /> {{ tag }}</li>
+            }
+          </ul>
+        }
+      </div>
+
+      <aside class="details__aside" aria-label="Plan your visit">
+        <div class="panel plan-card">
+          <h2 class="panel__title">Plan your visit</h2>
+
+          @if (stopNumber(); as stop) {
+            <p class="notice notice--success">
+              <app-icon name="check" [size]="18" />
+              <span
+                >This is <strong>stop {{ stop }}</strong> in your plan.</span
+              >
+            </p>
+          }
+
+          <div class="plan-card__actions">
+            <app-add-to-plan-button [attraction]="a" size="lg" variant="explicit" [block]="true" />
+            @if (stopNumber()) {
+              <a routerLink="/my-plan" class="btn btn--primary btn--block">
+                <app-icon name="route" [size]="18" /> Open My Plan
+              </a>
+            }
+          </div>
+
+          <dl class="facts">
+            @if (a.estimatedVisitDurationMinutes) {
+              <div class="facts__row">
+                <dt><app-icon name="clock" [size]="18" /> Typical visit</dt>
+                <dd>
+                  About {{ a.estimatedVisitDurationMinutes | duration }}
+                  <span class="demo-tag">Demo estimate</span>
+                </dd>
+              </div>
+            }
+            @if (a.openingHours) {
+              <div class="facts__row">
+                <dt><app-icon name="info" [size]="18" /> Opening hours</dt>
+                <dd>{{ a.openingHours }} <span class="demo-tag">Unverified</span></dd>
+              </div>
+            }
+            @if (a.entranceFee) {
+              <div class="facts__row">
+                <dt><app-icon name="ticket" [size]="18" /> Entrance</dt>
+                <dd>{{ a.entranceFee }} <span class="demo-tag">Unverified</span></dd>
+              </div>
+            }
+            <div class="facts__row">
+              <dt><app-icon name="map-pin" [size]="18" /> Area</dt>
+              <dd>{{ a.area }}</dd>
+            </div>
+            <div class="facts__row">
+              <dt><app-icon name="compass" [size]="18" /> Coordinates</dt>
+              <dd>
+                {{ coordinates() }}
+                @if (a.coordinatesApproximate) {
+                  <span class="demo-tag">Approximate</span>
+                }
+              </dd>
+            </div>
+          </dl>
+
+          <a class="btn btn--block" [href]="placeUrl()" target="_blank" rel="noopener">
+            <app-icon name="map" [size]="18" /> View location in Google Maps
+            <span class="visually-hidden">(opens in a new tab)</span>
+            <app-icon name="external" [size]="16" />
+          </a>
+
+          <p class="notice plan-card__note">
+            <app-icon name="info" [size]="18" />
+            <span>
+              Prototype data: opening hours, fees and visit times are estimates. Please confirm
+              locally before you travel.
+            </span>
+          </p>
+        </div>
+
+        <a routerLink="/explore" class="btn btn--ghost back-link">
+          <app-icon name="arrow-left" [size]="18" /> Back to Explore
+        </a>
+      </aside>
+    </div>
+
+    @if (s.data.nearby.length > 0) {
+      <section class="nearby" aria-labelledby="nearby-title">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Nearby</span>
+            <h2 id="nearby-title">Combine it with these places</h2>
+            <p>
+              The closest attractions by straight-line distance — road distances will be longer.
+            </p>
+          </div>
+        </div>
+        <ul class="card-grid">
+          @for (item of s.data.nearby; track item.attraction.id) {
+            <li>
+              <app-attraction-card
+                [attraction]="item.attraction"
+                [distanceLabel]="formatDistance(item.distanceKm)"
+              />
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </article>
+}

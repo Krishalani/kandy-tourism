@@ -1,0 +1,182 @@
+<section class="hero" aria-labelledby="hero-title">
+  <img
+    class="hero__image"
+    [src]="site.heroImage.url"
+    [alt]="site.heroImage.alt"
+    width="1280"
+    height="720"
+    fetchpriority="high"
+    appImgFallback
+  />
+  <div class="hero__overlay"></div>
+  <div class="container hero__content">
+    <span class="eyebrow hero__eyebrow">Sri Lanka’s hill capital</span>
+    <h1 id="hero-title" class="hero__title">Discover Kandy, Your Way</h1>
+    <p class="hero__text">
+      Explore temples, gardens, lakes and viewpoints, pick the places you love and arrange them into
+      your own one-day itinerary — then follow the route in Google Maps.
+    </p>
+    <div class="hero__actions">
+      <a routerLink="/explore" class="btn btn--accent btn--lg">
+        <app-icon name="compass" /> Explore Attractions
+      </a>
+      <a routerLink="/my-plan" class="btn btn--on-dark btn--lg">
+        <app-icon name="route" /> Plan My Day
+        @if (plan.count() > 0) {
+          <span class="hero__count">{{ plan.count() }}</span>
+          <span class="visually-hidden">stops saved</span>
+        }
+      </a>
+    </div>
+    <ul class="hero__facts" aria-label="Highlights">
+      <li>
+        <app-icon name="map-pin" [size]="18" />
+        @if (attractionCount(); as count) {
+          {{ count }} handpicked places
+        } @else {
+          Handpicked places
+        }
+      </li>
+      <li><app-icon name="route" [size]="18" /> Your order, your pace</li>
+      <li><app-icon name="navigation" [size]="18" /> Opens in Google Maps</li>
+    </ul>
+  </div>
+  <a class="hero__credit" [href]="site.heroImage.credit.sourceUrl" target="_blank" rel="noopener">
+    <app-icon name="camera" [size]="14" /> Photo: {{ site.heroImage.credit.label }}
+  </a>
+</section>
+
+<section class="section categories" aria-labelledby="categories-title">
+  <div class="container">
+    <h2 id="categories-title" class="visually-hidden">Browse by category</h2>
+    <ul class="categories__list">
+      @for (category of categories; track category.id) {
+        <li>
+          <a class="category-tile" routerLink="/explore" [queryParams]="{ category: category.id }">
+            <span class="category-tile__icon"><app-icon [name]="category.icon" [size]="22" /></span>
+            <span>{{ category.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<section class="section featured" aria-labelledby="featured-title">
+  <div class="container">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">Featured attractions</span>
+        <h2 id="featured-title">Kandy’s must-see places</h2>
+        <p>A curated starting point. Add any of them to your plan and arrange them later.</p>
+      </div>
+      <a routerLink="/explore" class="btn">
+        See all attractions <app-icon name="arrow-right" [size]="18" />
+      </a>
+    </div>
+
+    @let state = featured();
+    @if (state.status === 'loading') {
+      <app-loading-state label="Loading featured attractions" [count]="3" />
+    } @else if (state.status === 'error') {
+      <app-error-state message="Featured attractions are unavailable right now." />
+    } @else if (state.data.length > 0) {
+      <ul class="card-grid">
+        @for (attraction of state.data; track attraction.id) {
+          <li><app-attraction-card [attraction]="attraction" /></li>
+        }
+      </ul>
+    } @else {
+      <app-empty-state
+        title="No featured attractions yet"
+        message="Browse the full list of attractions instead."
+        [compact]="true"
+      >
+        <a routerLink="/explore" class="btn btn--primary">Explore attractions</a>
+      </app-empty-state>
+    }
+  </div>
+</section>
+
+<section class="section section--tinted" aria-labelledby="how-title">
+  <div class="container">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">How it works</span>
+        <h2 id="how-title">Plan a day in Kandy in four steps</h2>
+      </div>
+    </div>
+    <app-how-it-works />
+  </div>
+</section>
+
+<section class="section intro" aria-labelledby="intro-title">
+  <div class="container intro__grid">
+    <figure class="intro__media">
+      <img
+        [src]="site.aboutImage.url"
+        [alt]="site.aboutImage.alt"
+        width="960"
+        height="640"
+        loading="lazy"
+        appImgFallback
+      />
+      <figcaption>
+        Photo:
+        <a [href]="site.aboutImage.credit.sourceUrl" target="_blank" rel="noopener">{{
+          site.aboutImage.credit.label
+        }}</a>
+      </figcaption>
+    </figure>
+    <div class="intro__text">
+      <span class="eyebrow">Welcome to Kandy</span>
+      <h2 id="intro-title">A city of temples, hills and royal history</h2>
+      <p>
+        Set among forested hills in Sri Lanka’s Central Province, Kandy was the last capital of the
+        island’s kings. Today its lakeside centre, the Temple of the Sacred Tooth Relic and the
+        surrounding countryside make it one of the country’s most rewarding places to explore.
+      </p>
+      <p>
+        In a single day you can combine sacred sites, colonial architecture, botanical gardens and
+        sweeping viewpoints — the trick is choosing an order that suits you.
+      </p>
+      <ul class="intro__facts">
+        <li><strong>UNESCO</strong><span>Sacred City of Kandy World Heritage Site</span></li>
+        <li><strong>Hill country</strong><span>Cooler air and green views all around</span></li>
+        <li><strong>Day trip</strong><span>Many highlights are close to the city centre</span></li>
+      </ul>
+      <a routerLink="/about" class="btn">
+        More about Kandy <app-icon name="arrow-right" [size]="18" />
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section cta-section" aria-labelledby="cta-title">
+  <div class="container">
+    <div class="cta">
+      <div>
+        <h2 id="cta-title">Ready to plan your day?</h2>
+        @if (plan.count() > 0) {
+          <p>
+            You have {{ plan.count() }} {{ plan.count() === 1 ? 'place' : 'places' }} in your plan.
+            Arrange them and preview your route.
+          </p>
+        } @else {
+          <p>Start by choosing a few places you would like to visit.</p>
+        }
+      </div>
+      <div class="cta__actions">
+        @if (plan.count() > 0) {
+          <a routerLink="/my-plan" class="btn btn--accent btn--lg">
+            <app-icon name="route" /> Open My Plan
+          </a>
+        } @else {
+          <a routerLink="/explore" class="btn btn--accent btn--lg">
+            <app-icon name="compass" /> Explore Attractions
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+</section>

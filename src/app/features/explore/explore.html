@@ -1,0 +1,133 @@
+<header class="page-header">
+  <div class="container">
+    <span class="eyebrow">Explore Kandy</span>
+    <h1>Find places for your day</h1>
+    <p class="lead">
+      Search temples, gardens, museums and viewpoints in and around Kandy. Add the places you like
+      to My Plan, then arrange them in the order you want to visit.
+    </p>
+  </div>
+</header>
+
+<section class="container explore" aria-labelledby="results-title">
+  <div class="filters panel" role="search" aria-label="Filter attractions">
+    <div class="filters__row">
+      <div class="field filters__search">
+        <label class="field__label" for="search">Search</label>
+        <div class="search">
+          <app-icon name="search" [size]="18" />
+          <input
+            id="search"
+            class="input"
+            type="search"
+            placeholder="Try “temple”, “garden” or “view”"
+            autocomplete="off"
+            maxlength="100"
+            [value]="query()"
+            (input)="query.set($any($event.target).value)"
+          />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="duration">Visit length</label>
+        <select
+          id="duration"
+          class="select"
+          [value]="duration()"
+          (change)="duration.set($any($event.target).value)"
+        >
+          @for (option of durations; track option.id) {
+            <option [value]="option.id" [selected]="option.id === duration()">
+              {{ option.label }}
+            </option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="sort">Sort by</label>
+        <select
+          id="sort"
+          class="select"
+          [value]="sort()"
+          (change)="sort.set($any($event.target).value)"
+        >
+          @for (option of sorts; track option.id) {
+            <option [value]="option.id" [selected]="option.id === sort()">
+              {{ option.label }}
+            </option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="filters__categories" role="group" aria-label="Filter by category">
+      <button
+        type="button"
+        class="chip"
+        [attr.aria-pressed]="category() === 'all'"
+        (click)="setCategory('all')"
+      >
+        All categories
+      </button>
+      @for (c of categories; track c.id) {
+        <button
+          type="button"
+          class="chip"
+          [attr.aria-pressed]="category() === c.id"
+          (click)="setCategory(c.id)"
+        >
+          <app-icon [name]="c.icon" [size]="16" /> {{ c.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="results-bar">
+    <h2 id="results-title" class="results-bar__title" aria-live="polite">
+      {{ resultSummary() || 'Attractions' }}
+    </h2>
+    @if (hasActiveFilters()) {
+      <button type="button" class="btn btn--sm btn--ghost" (click)="clearFilters()">
+        <app-icon name="x" [size]="16" /> Clear filters
+      </button>
+    }
+  </div>
+
+  @let state = results();
+  @if (state.status === 'loading') {
+    <app-loading-state label="Loading attractions" [count]="6" />
+  } @else if (state.status === 'error') {
+    <app-error-state [message]="state.message" [retryable]="true" (retry)="retry()" />
+  } @else if (state.data.length === 0) {
+    <app-empty-state
+      icon="search"
+      title="No attractions match your filters"
+      message="Try a different search term or remove a filter to see more places."
+    >
+      <button type="button" class="btn btn--primary" (click)="clearFilters()">Clear filters</button>
+    </app-empty-state>
+  } @else {
+    <ul class="card-grid">
+      @for (attraction of state.data; track attraction.id) {
+        <li><app-attraction-card [attraction]="attraction" /></li>
+      }
+    </ul>
+  }
+</section>
+
+@if (plan.count() > 0) {
+  <aside class="plan-bar no-print" aria-label="Your plan">
+    <div class="container plan-bar__inner">
+      <p class="plan-bar__text">
+        <app-icon name="route" [size]="20" />
+        <span>
+          <strong>{{ plan.count() }} {{ plan.count() === 1 ? 'place' : 'places' }}</strong>
+          in your plan
+        </span>
+      </p>
+      <a routerLink="/my-plan" class="btn btn--accent">
+        View My Plan <app-icon name="arrow-right" [size]="18" />
+      </a>
+    </div>
+  </aside>
+}

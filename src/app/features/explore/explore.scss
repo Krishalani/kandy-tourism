@@ -1,0 +1,122 @@
+.page-header {
+  padding-bottom: calc(var(--space-12) + var(--space-10));
+}
+
+.explore {
+  padding-block: 0 var(--section-space);
+}
+
+.filters {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: calc(var(--space-12) * -1);
+  position: relative;
+  box-shadow: var(--shadow-md);
+}
+
+.filters__row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.search {
+  position: relative;
+
+  app-icon {
+    position: absolute;
+    top: 50%;
+    left: 0.9rem;
+    transform: translateY(-50%);
+    color: var(--color-ink-400);
+    pointer-events: none;
+  }
+
+  .input {
+    padding-left: 2.6rem;
+  }
+}
+
+.filters__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.results-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-8) 0 var(--space-5);
+}
+
+.results-bar__title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.plan-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 400;
+  border-top: 1px solid var(--color-forest-800);
+  background: var(--color-forest-900);
+  color: var(--color-white);
+  box-shadow: 0 -8px 24px rgb(15 42 28 / 18%);
+}
+
+.plan-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+}
+
+.plan-bar__text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+
+  app-icon {
+    color: var(--color-gold-400);
+  }
+}
+
+@media (max-width: 860px) {
+  .filters__row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filters__search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .filters {
+    padding: var(--space-4);
+  }
+
+  .filters__row {
+    grid-template-columns: 1fr;
+  }
+
+  .filters__categories {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(var(--space-4) * -1);
+    padding: 2px var(--space-4) var(--space-2);
+    scrollbar-width: thin;
+
+    .chip {
+      flex: none;
+    }
+  }
+}
