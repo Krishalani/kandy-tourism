@@ -1,0 +1,97 @@
+@let summary = plan.summary();
+<section class="panel summary" aria-labelledby="summary-title">
+  <h2 id="summary-title" class="panel__title"><app-icon name="clock" /> Trip summary</h2>
+
+  <dl class="stats">
+    <div class="stat">
+      <dt>Stops</dt>
+      <dd>{{ summary.stopCount }}</dd>
+    </div>
+    <div class="stat">
+      <dt>Time at attractions</dt>
+      <dd>
+        @if (summary.totalVisitMinutes > 0) {
+          About {{ summary.totalVisitMinutes | duration }}
+        } @else {
+          Not available
+        }
+      </dd>
+    </div>
+    <div class="stat">
+      <dt>Travel time</dt>
+      <dd class="stat__small">Shown in Google Maps</dd>
+    </div>
+  </dl>
+
+  @if (summary.stopsWithoutDuration > 0) {
+    <p class="summary__line muted">
+      {{ summary.stopsWithoutDuration }}
+      {{ summary.stopsWithoutDuration === 1 ? 'stop has' : 'stops have' }} no visit-time estimate
+      and {{ summary.stopsWithoutDuration === 1 ? 'is' : 'are' }} not included.
+    </p>
+  }
+
+  @switch (dayLoad()) {
+    @case ('overloaded') {
+      <p class="notice summary__line">
+        <app-icon name="alert" [size]="18" />
+        <span>
+          That’s more sightseeing than most people manage in one day, before adding travel. Consider
+          removing a stop or two.
+        </span>
+      </p>
+    }
+    @case ('full') {
+      <p class="notice notice--info summary__line">
+        <app-icon name="info" [size]="18" />
+        <span>A full day. Remember to leave time for travel, meals and rest.</span>
+      </p>
+    }
+  }
+
+  <p class="summary__disclaimer">
+    Visit times are demo estimates for planning only. Actual opening hours, traffic and travel
+    conditions may differ.
+  </p>
+</section>
+
+<section class="panel directions" aria-labelledby="directions-title">
+  <h2 id="directions-title" class="panel__title"><app-icon name="navigation" /> Ready to go?</h2>
+  <p class="directions__sequence">
+    <span class="visually-hidden">Route order: </span>{{ routeSequence() }}
+  </p>
+
+  @if (plan.directionsUrl(); as url) {
+    <a class="btn btn--primary btn--lg btn--block" [href]="url" target="_blank" rel="noopener">
+      <app-icon name="navigation" />
+      Open Directions in Google Maps
+      <span class="visually-hidden">(opens in a new tab)</span>
+      <app-icon name="external" [size]="16" />
+    </a>
+    <div class="directions__secondary">
+      <button type="button" class="btn btn--sm btn--ghost" (click)="copyLink()">
+        <app-icon name="copy" [size]="16" /> Copy directions link
+      </button>
+    </div>
+    <p class="directions__hint">
+      Opens Google Maps in a new tab with your {{ plan.count() }}
+      {{ plan.count() === 1 ? 'stop' : 'stops' }} in this exact order. Google Maps works out the
+      roads, distance and travel time.
+    </p>
+    @if (exceedsMobileWaypoints()) {
+      <p class="notice directions__hint">
+        <app-icon name="info" [size]="18" />
+        <span>
+          Some mobile browsers only show the first few stops of a long route. For the full route on
+          a phone, open the link in the Google Maps app.
+        </span>
+      </p>
+    }
+    <p class="print-only">Directions link: {{ url }}</p>
+  } @else {
+    <button type="button" class="btn btn--primary btn--lg btn--block" disabled>
+      <app-icon name="navigation" /> Open Directions in Google Maps
+    </button>
+    <p class="directions__hint">Add at least one attraction to create directions.</p>
+  }
+</section>

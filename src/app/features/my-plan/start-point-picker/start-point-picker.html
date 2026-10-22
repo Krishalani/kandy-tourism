@@ -1,0 +1,161 @@
+<section class="panel start" aria-labelledby="start-title">
+  <div class="start__summary">
+    <span class="start__icon"><app-icon name="flag" [size]="20" /></span>
+    <div class="start__text">
+      <h2 id="start-title" class="start__title">Starting point</h2>
+      <p class="start__current">{{ plan.resolvedStart().label }}</p>
+    </div>
+    <button
+      type="button"
+      class="btn btn--sm"
+      aria-controls="start-options"
+      [attr.aria-expanded]="expanded()"
+      (click)="expanded.set(!expanded())"
+    >
+      {{ expanded() ? 'Done' : 'Change' }}
+      <span class="visually-hidden">starting point</span>
+    </button>
+  </div>
+
+  @if (startIsAlsoStop()) {
+    <p class="notice start__notice">
+      <app-icon name="info" [size]="18" />
+      <span
+        >Your starting point is also one of your stops. You can remove that stop if you like.</span
+      >
+    </p>
+  }
+  @if (customStartActive()) {
+    <p class="notice notice--info start__notice">
+      <app-icon name="info" [size]="18" />
+      <span>
+        A typed start is passed to Google Maps as text. It can’t be shown on the preview map in this
+        prototype.
+      </span>
+    </p>
+  }
+
+  <div id="start-options" class="start__options" [hidden]="!expanded()">
+    <fieldset class="options">
+      <legend class="visually-hidden">Choose where your day starts</legend>
+
+      @for (preset of plan.startPresets; track preset.id) {
+        <label class="option">
+          <input
+            type="radio"
+            name="start-choice"
+            [value]="'preset:' + preset.id"
+            [checked]="choice() === 'preset:' + preset.id"
+            (change)="select($any('preset:' + preset.id))"
+          />
+          <span class="option__body">
+            <span class="option__label">{{ preset.label }}</span>
+            <span class="option__hint">{{ preset.description }}</span>
+          </span>
+        </label>
+      }
+
+      <label class="option">
+        <input
+          type="radio"
+          name="start-choice"
+          value="attraction"
+          [checked]="choice() === 'attraction'"
+          (change)="select('attraction')"
+        />
+        <span class="option__body">
+          <span class="option__label">One of the attractions</span>
+          <span class="option__hint">e.g. where you are staying nearby</span>
+        </span>
+      </label>
+      @if (choice() === 'attraction') {
+        <div class="option__extra field">
+          <label class="field__label" for="start-attraction">Start from</label>
+          <select
+            id="start-attraction"
+            class="select"
+            [value]="selectedAttractionId()"
+            (change)="chooseAttraction($any($event.target).value)"
+          >
+            <option value="" [selected]="!selectedAttractionId()">Choose an attraction…</option>
+            @for (a of attractions(); track a.id) {
+              <option [value]="a.id" [selected]="a.id === selectedAttractionId()">
+                {{ a.name }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+
+      <label class="option">
+        <input
+          type="radio"
+          name="start-choice"
+          value="custom"
+          [checked]="choice() === 'custom'"
+          (change)="select('custom')"
+        />
+        <span class="option__body">
+          <span class="option__label">Type an address or place</span>
+          <span class="option__hint">Such as your hotel name</span>
+        </span>
+      </label>
+      @if (choice() === 'custom') {
+        <form class="option__extra field" (submit)="applyCustom($event)">
+          <label class="field__label" for="start-custom">Address or place name</label>
+          <div class="inline-form">
+            <input
+              id="start-custom"
+              class="input"
+              type="text"
+              maxlength="200"
+              autocomplete="street-address"
+              placeholder="e.g. Queen’s Hotel, Kandy"
+              [value]="customText()"
+              (input)="customText.set($any($event.target).value)"
+            />
+            <button type="submit" class="btn btn--primary" [disabled]="!customText().trim()">
+              Use this start
+            </button>
+          </div>
+        </form>
+      }
+
+      <label class="option">
+        <input
+          type="radio"
+          name="start-choice"
+          value="current"
+          [checked]="choice() === 'current'"
+          (change)="select('current')"
+        />
+        <span class="option__body">
+          <span class="option__label">My current location</span>
+          <span class="option__hint">Optional — only if you choose to share it</span>
+        </span>
+      </label>
+      @if (choice() === 'current') {
+        <div class="option__extra">
+          <p class="option__note">
+            Your browser will ask for permission. The location is used only on this page to build
+            your route and is not saved or sent anywhere.
+          </p>
+          <button
+            type="button"
+            class="btn btn--primary"
+            [disabled]="geoState() === 'requesting'"
+            (click)="useCurrentLocation()"
+          >
+            <app-icon name="locate" [size]="18" />
+            {{ geoState() === 'requesting' ? 'Finding your location…' : 'Share my location' }}
+          </button>
+          @if (geoState() === 'error') {
+            <p class="field__error" role="alert">
+              <app-icon name="alert" [size]="16" /> {{ geoMessage() }}
+            </p>
+          }
+        </div>
+      }
+    </fieldset>
+  </div>
+</section>

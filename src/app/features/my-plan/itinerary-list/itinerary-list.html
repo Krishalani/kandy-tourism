@@ -1,0 +1,85 @@
+<div class="route-start">
+  <span class="route-start__marker" aria-hidden="true">Start</span>
+  <div>
+    <span class="route-start__label">Starting from</span>
+    <span class="route-start__name">{{ plan.resolvedStart().label }}</span>
+  </div>
+</div>
+
+<ol
+  class="itinerary"
+  cdkDropList
+  cdkDropListLockAxis="y"
+  [cdkDropListData]="plan.stops()"
+  (cdkDropListDropped)="drop($event)"
+  aria-label="Stops in visiting order"
+>
+  @for (stop of plan.stops(); track stop.attraction.id) {
+    @let a = stop.attraction;
+    <li class="stop" cdkDrag [attr.data-stop-id]="a.id" [class.stop--final]="stop.isFinal">
+      <div class="stop__handle" cdkDragHandle title="Drag to reorder" aria-hidden="true">
+        <app-icon name="grip" [size]="18" />
+      </div>
+      <span class="stop__number" aria-hidden="true">{{ stop.order }}</span>
+      <img
+        class="stop__thumb"
+        [src]="a.imageUrl"
+        alt=""
+        width="72"
+        height="72"
+        loading="lazy"
+        appImgFallback
+      />
+      <div class="stop__info">
+        <a class="stop__name" [routerLink]="['/attractions', a.slug]">
+          <span class="visually-hidden"
+            >Stop {{ stop.order }}{{ stop.isFinal ? ', final stop' : '' }}:
+          </span>
+          {{ a.name }}
+        </a>
+        <p class="stop__meta">
+          <span><app-icon name="map-pin" [size]="14" /> {{ a.area }}</span>
+          @if (a.estimatedVisitDurationMinutes) {
+            <span
+              ><app-icon name="clock" [size]="14" /> About
+              {{ a.estimatedVisitDurationMinutes | duration }}</span
+            >
+          }
+        </p>
+        @if (stop.isFinal && plan.count() > 1) {
+          <span class="badge badge--gold stop__final"
+            ><app-icon name="flag" [size]="12" /> Final stop</span
+          >
+        }
+      </div>
+      <div class="stop__actions">
+        <button
+          type="button"
+          class="icon-btn stop__up"
+          [disabled]="stop.order === 1"
+          (click)="moveUp(stop)"
+        >
+          <app-icon name="arrow-up" [size]="18" />
+          <span class="visually-hidden">Move {{ a.name }} up</span>
+        </button>
+        <button
+          type="button"
+          class="icon-btn stop__down"
+          [disabled]="stop.isFinal"
+          (click)="moveDown(stop)"
+        >
+          <app-icon name="arrow-down" [size]="18" />
+          <span class="visually-hidden">Move {{ a.name }} down</span>
+        </button>
+        <button type="button" class="icon-btn icon-btn--danger stop__remove" (click)="remove(stop)">
+          <app-icon name="trash" [size]="18" />
+          <span class="visually-hidden">Remove {{ a.name }} from My Plan</span>
+        </button>
+      </div>
+      <div class="stop-placeholder" *cdkDragPlaceholder></div>
+    </li>
+  }
+</ol>
+
+<span class="itinerary-empty-focus" tabindex="-1"></span>
+<p class="visually-hidden" aria-live="polite" aria-atomic="true">{{ announcement() }}</p>

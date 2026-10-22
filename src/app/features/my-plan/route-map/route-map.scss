@@ -1,0 +1,111 @@
+:host {
+  display: block;
+}
+
+.map-card {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.map-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.map-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.map-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.map {
+  height: clamp(360px, 58vh, 560px);
+  z-index: 0;
+}
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  background: var(--color-forest-50);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.map-overlay--error {
+  color: var(--color-danger);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--color-ink-700);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+}
+
+.legend__start,
+.legend__stop,
+.legend__final {
+  display: inline-grid;
+  place-items: center;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  background: var(--color-forest-700);
+  color: var(--color-white);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.legend__start {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--color-gold-400);
+  color: var(--color-forest-900);
+  text-transform: uppercase;
+}
+
+.legend__final {
+  background: var(--color-forest-900);
+  box-shadow: 0 0 0 2px var(--color-gold-400);
+}
+
+.legend__line {
+  width: 28px;
+  border-top: 3px dotted var(--color-forest-700);
+}
+
+.map-note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+}

@@ -1,0 +1,60 @@
+<div class="map-card">
+  <div class="map-card__header">
+    <h2 class="map-card__title"><app-icon name="map" [size]="20" /> Route preview</h2>
+    @if (status() === 'ready' && stops().length > 0) {
+      <button type="button" class="btn btn--sm" (click)="recenter()">
+        <app-icon name="locate" [size]="16" /> Fit route
+      </button>
+    }
+  </div>
+
+  <div class="map-frame">
+    <div
+      #map
+      class="map"
+      role="region"
+      aria-label="Map preview of your stops in visiting order"
+      aria-describedby="map-note"
+    ></div>
+    @if (status() === 'loading') {
+      <div class="map-overlay" role="status">Loading map…</div>
+    }
+    @if (status() === 'error') {
+      <div class="map-overlay map-overlay--error" role="alert">
+        <app-icon name="alert" />
+        <span>The map preview couldn’t load. Your itinerary and Google Maps link still work.</span>
+      </div>
+    }
+  </div>
+
+  <ul class="legend" aria-label="Map legend">
+    <li><span class="legend__start" aria-hidden="true">Start</span> Starting point</li>
+    <li><span class="legend__stop" aria-hidden="true">1</span> Stops in your order</li>
+    <li>
+      <span class="legend__final" aria-hidden="true">{{ stops().length || 1 }}</span> Final stop
+    </li>
+    <li><span class="legend__line" aria-hidden="true"></span> Visiting order</li>
+  </ul>
+
+  <p id="map-note" class="notice notice--info map-note">
+    <app-icon name="info" [size]="18" />
+    <span>
+      This is a schematic preview. Dashed lines join your stops in order as straight lines — they
+      are not roads. Google Maps calculates the actual route, distance and travel time.
+    </span>
+  </p>
+  @if (!start().point) {
+    <p class="notice map-note">
+      <app-icon name="flag" [size]="18" />
+      <span
+        >Your typed starting point isn’t shown on this map, but it is included in Google Maps.</span
+      >
+    </p>
+  }
+  @if (tilesFailed()) {
+    <p class="notice map-note">
+      <app-icon name="alert" [size]="18" />
+      <span>Some map tiles didn’t load. The numbered markers still show your order.</span>
+    </p>
+  }
+</div>

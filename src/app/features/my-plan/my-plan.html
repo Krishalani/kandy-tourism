@@ -1,0 +1,88 @@
+<header class="page-header">
+  <div class="container page-header__row">
+    <div>
+      <span class="eyebrow">Your one-day itinerary</span>
+      <h1>My Plan</h1>
+      <p class="lead">
+        Arrange your stops in the order you want to visit. The map and the Google Maps link always
+        follow this order.
+      </p>
+    </div>
+    @if (plan.restored() && plan.count() > 0) {
+      <div class="page-header__actions no-print">
+        <button type="button" class="btn btn--sm" (click)="print()">
+          <app-icon name="printer" [size]="16" /> Print itinerary
+        </button>
+        <button type="button" class="btn btn--sm btn--danger" (click)="clearPlan()">
+          <app-icon name="trash" [size]="16" /> Clear plan
+        </button>
+      </div>
+    }
+  </div>
+</header>
+
+@if (!plan.restored()) {
+  <div class="container plan-loading" role="status">Loading your saved plan…</div>
+} @else if (plan.count() === 0) {
+  <div class="container">
+    <app-empty-state
+      icon="route"
+      title="Your plan is empty"
+      message="You haven’t added any places to your trip yet. Explore Kandy attractions and add the places you’d like to visit."
+    >
+      <a routerLink="/explore" class="btn btn--primary btn--lg">
+        <app-icon name="compass" /> Explore attractions
+      </a>
+      <button type="button" class="btn btn--lg" (click)="addSampleDay()">
+        <app-icon name="sparkles" /> Try a sample day
+      </button>
+    </app-empty-state>
+  </div>
+} @else {
+  <div class="container plan-layout">
+    <div class="plan-main">
+      <button type="button" class="btn btn--block show-map no-print" (click)="showMap()">
+        <app-icon name="map" [size]="18" /> View route map
+      </button>
+
+      <app-start-point-picker class="no-print" />
+      <p class="print-only print-start"><strong>Start:</strong> {{ plan.resolvedStart().label }}</p>
+
+      <section class="panel stops" aria-labelledby="stops-title">
+        <div class="stops__header">
+          <h2 id="stops-title" class="panel__title">
+            Your stops <span class="stops__count">{{ plan.count() }} of {{ plan.maxStops }}</span>
+          </h2>
+          <p class="stops__hint no-print">
+            Drag the handle, or use the arrow buttons, to change the order.
+          </p>
+        </div>
+
+        <app-itinerary-list />
+
+        <div class="stops__footer no-print">
+          @if (!plan.isFull()) {
+            <a routerLink="/explore" class="btn btn--sm">
+              <app-icon name="plus" [size]="16" /> Add more places
+            </a>
+          } @else {
+            <p class="stops__full">
+              You’ve reached the {{ plan.maxStops }}-stop limit supported by Google Maps links.
+            </p>
+          }
+          @if (plan.count() >= 3) {
+            <button type="button" class="btn btn--sm btn--ghost" (click)="suggestOrder()">
+              <app-icon name="sparkles" [size]="16" /> Suggest an order
+            </button>
+          }
+        </div>
+      </section>
+
+      <app-trip-summary />
+    </div>
+
+    <section #mapSection class="plan-map no-print" aria-label="Route preview" tabindex="-1">
+      <app-route-map [start]="plan.resolvedStart()" [stops]="plan.stops()" />
+    </section>
+  </div>
+}
