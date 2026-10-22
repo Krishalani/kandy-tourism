@@ -1,0 +1,116 @@
+<header class="page-header">
+  <div class="container">
+    <span class="eyebrow">About</span>
+    <h1>About Kandy and this planner</h1>
+    <p class="lead">
+      {{ site.info.name }} helps visitors discover Kandy and organise a convenient one-day itinerary
+      — at their own pace and in their own order.
+    </p>
+  </div>
+</header>
+
+<section class="section" aria-labelledby="kandy-title">
+  <div class="container about__grid">
+    <div class="about__text">
+      <span class="eyebrow">The city</span>
+      <h2 id="kandy-title">Kandy, the hill capital</h2>
+      <p>
+        Kandy sits in the hills of Sri Lanka’s Central Province, wrapped around a tranquil lake and
+        surrounded by forest, tea country and the Mahaweli River. It was the seat of the last
+        Sinhalese kingdom, and its royal and religious heritage is recognised in the Sacred City of
+        Kandy UNESCO World Heritage Site.
+      </p>
+      <p>
+        The Temple of the Sacred Tooth Relic draws pilgrims from across the island, while botanical
+        gardens, colonial-era buildings, medieval temples and hilltop viewpoints give visitors
+        plenty to see within a short distance of the city centre.
+      </p>
+    </div>
+    <figure class="about__media">
+      <img
+        [src]="site.aboutImage.url"
+        [alt]="site.aboutImage.alt"
+        width="960"
+        height="640"
+        loading="lazy"
+        appImgFallback
+      />
+      <figcaption>
+        Photo:
+        <a [href]="site.aboutImage.credit.sourceUrl" target="_blank" rel="noopener">{{
+          site.aboutImage.credit.label
+        }}</a>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section section--tinted" aria-labelledby="features-title">
+  <div class="container">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">What the planner does</span>
+        <h2 id="features-title">Built around your day</h2>
+      </div>
+    </div>
+    <ul class="features">
+      @for (feature of features; track feature.title) {
+        <li class="feature">
+          <span class="feature__icon"><app-icon [name]="feature.icon" [size]="22" /></span>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.text }}</p>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="how-title">
+  <div class="container">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">How it works</span>
+        <h2 id="how-title">From idea to itinerary</h2>
+      </div>
+      <a routerLink="/explore" class="btn btn--primary">
+        Start exploring <app-icon name="arrow-right" [size]="18" />
+      </a>
+    </div>
+    <app-how-it-works />
+  </div>
+</section>
+
+<section class="section section--tinted" aria-labelledby="prototype-title">
+  <div class="container container--narrow">
+    <h2 id="prototype-title">About this prototype</h2>
+    <ul class="prototype-list">
+      <li>
+        <app-icon name="info" [size]="18" />
+        <span>
+          This is an independent planning prototype. It is not affiliated with, or endorsed by, any
+          official tourism authority or the attractions listed.
+        </span>
+      </li>
+      <li>
+        <app-icon name="clock" [size]="18" />
+        <span>
+          Visit durations, opening hours and entrance fees are demo estimates. Always confirm
+          details locally before you travel.
+        </span>
+      </li>
+      <li>
+        <app-icon name="map-pin" [size]="18" />
+        <span>
+          Coordinates are taken from public sources where available; some are marked as approximate.
+        </span>
+      </li>
+      <li>
+        <app-icon name="camera" [size]="18" />
+        <span>
+          Photos are from Wikimedia Commons contributors and map tiles are © OpenStreetMap
+          contributors.
+        </span>
+      </li>
+    </ul>
+  </div>
+</section>

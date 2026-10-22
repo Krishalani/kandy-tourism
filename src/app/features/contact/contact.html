@@ -1,0 +1,170 @@
+<header class="page-header">
+  <div class="container">
+    <span class="eyebrow">Contact</span>
+    <h1>Get in touch</h1>
+    <p class="lead">
+      Questions, suggestions or a place we should add? Send us a note using the form below.
+    </p>
+  </div>
+</header>
+
+<section class="container contact">
+  <div class="panel contact__form-panel">
+    @if (sentTo(); as name) {
+      <div id="contact-success" class="success" tabindex="-1" role="status">
+        <span class="success__icon"><app-icon name="check" [size]="28" /></span>
+        <h2>Thank you, {{ name }}!</h2>
+        <p>
+          Your message passed validation. <strong>This is a frontend demo</strong>, so it was not
+          sent or stored anywhere and no email has been delivered.
+        </p>
+        <button type="button" class="btn" (click)="sendAnother()">Write another message</button>
+      </div>
+    } @else {
+      <h2 class="contact__title">Send a message</h2>
+      <p class="notice notice--info">
+        <app-icon name="info" [size]="18" />
+        <span>Demo form: submissions are validated in your browser but not sent anywhere.</span>
+      </p>
+
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="form-row">
+          <div class="field">
+            <label class="field__label" for="name">
+              Name <span class="field__required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="name"
+              class="input"
+              type="text"
+              formControlName="name"
+              autocomplete="name"
+              required
+              [attr.aria-invalid]="showError(form.controls.name)"
+              [attr.aria-describedby]="showError(form.controls.name) ? 'name-error' : null"
+            />
+            @if (showError(form.controls.name)) {
+              <p id="name-error" class="field__error">
+                <app-icon name="alert" [size]="16" /> Please enter your name.
+              </p>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="email">
+              Email <span class="field__required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="email"
+              class="input"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              inputmode="email"
+              required
+              [attr.aria-invalid]="showError(form.controls.email)"
+              [attr.aria-describedby]="showError(form.controls.email) ? 'email-error' : null"
+            />
+            @if (showError(form.controls.email)) {
+              <p id="email-error" class="field__error">
+                <app-icon name="alert" [size]="16" />
+                @if (form.controls.email.hasError('required')) {
+                  Please enter your email address.
+                } @else {
+                  Please enter a valid email address, like name&#64;example.com.
+                }
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="subject">
+            Subject <span class="field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="subject"
+            class="input"
+            type="text"
+            formControlName="subject"
+            required
+            [attr.aria-invalid]="showError(form.controls.subject)"
+            [attr.aria-describedby]="showError(form.controls.subject) ? 'subject-error' : null"
+          />
+          @if (showError(form.controls.subject)) {
+            <p id="subject-error" class="field__error">
+              <app-icon name="alert" [size]="16" /> Please add a subject.
+            </p>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="message">
+            Message <span class="field__required" aria-hidden="true">*</span>
+          </label>
+          <textarea
+            id="message"
+            class="textarea"
+            formControlName="message"
+            rows="6"
+            required
+            [attr.aria-invalid]="showError(form.controls.message)"
+            [attr.aria-describedby]="
+              showError(form.controls.message) ? 'message-error message-hint' : 'message-hint'
+            "
+          ></textarea>
+          <p id="message-hint" class="field__hint">At least 10 characters.</p>
+          @if (showError(form.controls.message)) {
+            <p id="message-error" class="field__error">
+              <app-icon name="alert" [size]="16" />
+              @if (form.controls.message.hasError('required')) {
+                Please write a message.
+              } @else {
+                Your message is a little short — please add a few more words.
+              }
+            </p>
+          }
+        </div>
+
+        <p class="field__hint"><span aria-hidden="true">*</span> Required field</p>
+
+        <div>
+          <button type="submit" class="btn btn--primary btn--lg">
+            <app-icon name="send" [size]="18" /> Send message
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+
+  <aside class="contact__aside" aria-labelledby="details-title">
+    <div class="panel">
+      <h2 id="details-title" class="panel__title">
+        Contact details <span class="demo-tag">Demo details</span>
+      </h2>
+      <ul class="details-list">
+        <li>
+          <app-icon name="mail" />
+          <div><span class="details-list__label">Email</span>{{ site.info.contact.email }}</div>
+        </li>
+        <li>
+          <app-icon name="phone" />
+          <div><span class="details-list__label">Phone</span>{{ site.info.contact.phone }}</div>
+        </li>
+        <li>
+          <app-icon name="map-pin" />
+          <div>
+            <span class="details-list__label">Location</span>{{ site.info.contact.address }}
+          </div>
+        </li>
+        <li>
+          <app-icon name="clock" />
+          <div><span class="details-list__label">Hours</span>{{ site.info.contact.hours }}</div>
+        </li>
+      </ul>
+      <p class="field__hint">
+        These are placeholder details for the prototype and do not belong to a real organisation.
+      </p>
+    </div>
+  </aside>
+</section>
