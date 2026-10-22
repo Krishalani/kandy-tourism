@@ -1,0 +1,99 @@
+.admin {
+  min-height: 100vh;
+  background: #f4f2ec;
+}
+
+.admin__bar {
+  background: var(--color-forest-900);
+  color: var(--color-white);
+
+  :focus-visible {
+    outline-color: var(--color-gold-400);
+  }
+}
+
+.admin__bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding-block: var(--space-2);
+}
+
+.admin__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-white);
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-white);
+  }
+}
+
+.admin__demo {
+  margin-left: var(--space-1);
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-gold-400);
+  color: var(--color-forest-900);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.admin__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  a,
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    padding: 0.4rem 0.8rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: #d6e4da;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover,
+    &.active {
+      background: rgb(255 255 255 / 12%);
+      color: var(--color-white);
+    }
+  }
+}
+
+.admin__banner {
+  padding-block: var(--space-2);
+  background: var(--color-gold-100);
+  border-bottom: 1px solid #ecd6a8;
+  color: var(--color-ink-700);
+  font-size: var(--text-xs);
+
+  .container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  app-icon {
+    color: var(--color-gold-700);
+  }
+}
+
+.admin__main {
+  padding-block: var(--space-8) var(--space-16);
+}

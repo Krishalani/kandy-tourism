@@ -1,0 +1,80 @@
+<div class="heading">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted">An overview of the prototype’s attraction data.</p>
+  </div>
+  <a routerLink="/admin/attractions/new" class="btn btn--primary">
+    <app-icon name="plus" [size]="18" /> Add attraction
+  </a>
+</div>
+
+@if (state().status === 'error') {
+  <app-error-state message="Attraction data couldn’t be loaded." />
+}
+
+@if (stats(); as s) {
+  <ul class="stat-cards">
+    <li class="stat-card">
+      <span class="stat-card__icon"><app-icon name="map-pin" /></span>
+      <span class="stat-card__value">{{ s.total }}</span>
+      <span class="stat-card__label">Total attractions</span>
+    </li>
+    <li class="stat-card">
+      <span class="stat-card__icon"><app-icon name="grid" /></span>
+      <span class="stat-card__value">{{ s.categoriesInUse }}</span>
+      <span class="stat-card__label">Categories in use</span>
+    </li>
+    <li class="stat-card">
+      <span class="stat-card__icon"><app-icon name="star" /></span>
+      <span class="stat-card__value">{{ s.featured }}</span>
+      <span class="stat-card__label">Featured attractions</span>
+    </li>
+    <li class="stat-card">
+      <span class="stat-card__icon"><app-icon name="compass" /></span>
+      <span class="stat-card__value">{{ s.approximateCoordinates }}</span>
+      <span class="stat-card__label">With approximate coordinates</span>
+    </li>
+  </ul>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="by-category-title">
+      <h2 id="by-category-title" class="panel__title">Attractions by category</h2>
+      <ul class="bars">
+        @for (row of s.byCategory; track row.category.id) {
+          <li class="bar">
+            <span class="bar__label"
+              ><app-icon [name]="row.category.icon" [size]="16" /> {{ row.category.label }}</span
+            >
+            <span class="bar__track" aria-hidden="true">
+              <span class="bar__fill" [style.width.%]="(row.count / s.max) * 100"></span>
+            </span>
+            <span class="bar__count">{{ row.count }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="demo-data-title">
+      <h2 id="demo-data-title" class="panel__title">Demo data</h2>
+      @if (demoData.hasDemoChanges()) {
+        <p>
+          You have made changes in this browser. They are stored in local storage only and are
+          visible only on this device.
+        </p>
+      } @else {
+        <p>You are viewing the original prototype data. No changes have been made yet.</p>
+      }
+      <div class="actions">
+        <a routerLink="/admin/attractions" class="btn">Manage attractions</a>
+        <button
+          type="button"
+          class="btn btn--danger"
+          [disabled]="!demoData.hasDemoChanges()"
+          (click)="resetDemo()"
+        >
+          <app-icon name="refresh" [size]="16" /> Reset demo data
+        </button>
+      </div>
+    </section>
+  </div>
+}

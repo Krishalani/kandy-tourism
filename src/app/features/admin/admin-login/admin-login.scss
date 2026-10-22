@@ -1,0 +1,44 @@
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+  background:
+    radial-gradient(circle at 20% 10%, rgb(63 132 96 / 18%), transparent 45%),
+    var(--color-cream-100);
+}
+
+.login__card {
+  width: min(460px, 100%);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.login__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  color: var(--color-forest-900);
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login__notice {
+  margin-bottom: var(--space-6);
+
+  p {
+    margin-bottom: var(--space-2);
+  }
+
+  code {
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    background: rgb(255 255 255 / 70%);
+    font-size: 0.85em;
+  }
+}
+
+.login__back {
+  margin-top: var(--space-3);
+}

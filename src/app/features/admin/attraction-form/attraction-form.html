@@ -1,0 +1,308 @@
+<a routerLink="/admin/attractions" class="btn btn--sm btn--ghost back">
+  <app-icon name="arrow-left" [size]="16" /> Back to attractions
+</a>
+
+@if (notFound()) {
+  <app-empty-state
+    icon="map-pin"
+    title="Attraction not found"
+    message="It may have been deleted in this browser."
+  >
+    <a routerLink="/admin/attractions" class="btn btn--primary">Back to attractions</a>
+  </app-empty-state>
+} @else {
+  <h1 class="title">{{ isEdit() ? 'Edit attraction' : 'Add attraction' }}</h1>
+  <p class="notice">
+    <app-icon name="info" [size]="18" />
+    <span>
+      Demo only: saving updates the data in this browser’s local storage. Nothing is sent to a
+      server. Opening hours, fees and durations are shown to visitors as estimates.
+    </span>
+  </p>
+
+  <ng-template #error let-field>
+    @if (showError(field)) {
+      <p class="field__error" [id]="field + '-error'">
+        <app-icon name="alert" [size]="16" /> {{ errorMessage(field) }}
+      </p>
+    }
+  </ng-template>
+
+  <form class="layout" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="main">
+      <fieldset class="panel group">
+        <legend class="group__legend">Basics</legend>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="f-name"
+              >Name <span class="field__required" aria-hidden="true">*</span></label
+            >
+            <input
+              id="f-name"
+              class="input"
+              formControlName="name"
+              [attr.aria-invalid]="showError('name')"
+              [attr.aria-describedby]="showError('name') ? 'name-error' : null"
+            />
+            <ng-container *ngTemplateOutlet="error; context: { $implicit: 'name' }" />
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="f-slug"
+                >URL slug <span class="field__required" aria-hidden="true">*</span></label
+              >
+              <input
+                id="f-slug"
+                class="input"
+                formControlName="slug"
+                (input)="onSlugInput()"
+                [attr.aria-invalid]="showError('slug')"
+                aria-describedby="slug-hint"
+              />
+              <p id="slug-hint" class="field__hint">
+                Used in the address: /attractions/{{ form.controls.slug.value || 'your-slug' }}
+              </p>
+              <ng-container *ngTemplateOutlet="error; context: { $implicit: 'slug' }" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-category"
+                >Category <span class="field__required" aria-hidden="true">*</span></label
+              >
+              <select
+                id="f-category"
+                class="select"
+                formControlName="category"
+                [attr.aria-invalid]="showError('category')"
+              >
+                <option value="" disabled>Choose a category</option>
+                @for (c of categories; track c.id) {
+                  <option [value]="c.id">{{ c.label }}</option>
+                }
+              </select>
+              <ng-container *ngTemplateOutlet="error; context: { $implicit: 'category' }" />
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-short"
+              >Short description <span class="field__required" aria-hidden="true">*</span></label
+            >
+            <textarea
+              id="f-short"
+              class="textarea textarea--short"
+              formControlName="shortDescription"
+              [attr.aria-invalid]="showError('shortDescription')"
+            ></textarea>
+            <ng-container *ngTemplateOutlet="error; context: { $implicit: 'shortDescription' }" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-description"
+              >Full description <span class="field__required" aria-hidden="true">*</span></label
+            >
+            <textarea
+              id="f-description"
+              class="textarea"
+              formControlName="description"
+              aria-describedby="description-hint"
+              [attr.aria-invalid]="showError('description')"
+            ></textarea>
+            <p id="description-hint" class="field__hint">Separate paragraphs with a blank line.</p>
+            <ng-container *ngTemplateOutlet="error; context: { $implicit: 'description' }" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="panel group">
+        <legend class="group__legend">Location</legend>
+        <div class="form-grid">
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="f-address"
+                >Address <span class="field__required" aria-hidden="true">*</span></label
+              >
+              <input
+                id="f-address"
+                class="input"
+                formControlName="address"
+                [attr.aria-invalid]="showError('address')"
+              />
+              <ng-container *ngTemplateOutlet="error; context: { $implicit: 'address' }" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-area"
+                >Area <span class="field__required" aria-hidden="true">*</span></label
+              >
+              <input
+                id="f-area"
+                class="input"
+                formControlName="area"
+                placeholder="e.g. Kandy City"
+                [attr.aria-invalid]="showError('area')"
+              />
+              <ng-container *ngTemplateOutlet="error; context: { $implicit: 'area' }" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="f-lat"
+                >Latitude <span class="field__required" aria-hidden="true">*</span></label
+              >
+              <input
+                id="f-lat"
+                class="input"
+                type="number"
+                step="0.0001"
+                inputmode="decimal"
+                formControlName="latitude"
+                [attr.aria-invalid]="showError('latitude')"
+              />
+              <ng-container *ngTemplateOutlet="error; context: { $implicit: 'latitude' }" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-lng"
+                >Longitude <span class="field__required" aria-hidden="true">*</span></label
+              >
+              <input
+                id="f-lng"
+                class="input"
+                type="number"
+                step="0.0001"
+                inputmode="decimal"
+                formControlName="longitude"
+                [attr.aria-invalid]="showError('longitude')"
+              />
+              <ng-container *ngTemplateOutlet="error; context: { $implicit: 'longitude' }" />
+            </div>
+          </div>
+          <label class="checkbox"
+            ><input type="checkbox" formControlName="coordinatesApproximate" /> Coordinates are
+            approximate</label
+          >
+        </div>
+      </fieldset>
+
+      <fieldset class="panel group">
+        <legend class="group__legend">Visitor information (shown as estimates)</legend>
+        <div class="form-grid">
+          <div class="form-row">
+            <div class="field">
+              <label class="field__label" for="f-duration">Typical visit (minutes)</label>
+              <input
+                id="f-duration"
+                class="input"
+                type="number"
+                min="5"
+                max="720"
+                step="5"
+                formControlName="estimatedVisitDurationMinutes"
+                [attr.aria-invalid]="showError('estimatedVisitDurationMinutes')"
+              />
+              <ng-container
+                *ngTemplateOutlet="error; context: { $implicit: 'estimatedVisitDurationMinutes' }"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-hours">Opening hours</label>
+              <input id="f-hours" class="input" formControlName="openingHours" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-fee">Entrance fee</label>
+              <input id="f-fee" class="input" formControlName="entranceFee" />
+            </div>
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-tips">Visitor tips</label>
+            <textarea
+              id="f-tips"
+              class="textarea textarea--short"
+              formControlName="visitorTips"
+              aria-describedby="tips-hint"
+            ></textarea>
+            <p id="tips-hint" class="field__hint">One tip per line.</p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-tags">Tags</label>
+            <input id="f-tags" class="input" formControlName="tags" aria-describedby="tags-hint" />
+            <p id="tags-hint" class="field__hint">Comma-separated, used by search.</p>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <aside class="side">
+      <fieldset class="panel group">
+        <legend class="group__legend">Images</legend>
+        <div class="form-grid">
+          <div class="preview">
+            @if (imagePreview() || form.controls.imageUrl.value) {
+              <img
+                [src]="imagePreview() || form.controls.imageUrl.value"
+                alt="Preview of the main image"
+                appImgFallback
+              />
+            } @else {
+              <span>Image preview</span>
+            }
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-image"
+              >Main image URL <span class="field__required" aria-hidden="true">*</span></label
+            >
+            <input
+              id="f-image"
+              class="input"
+              type="url"
+              formControlName="imageUrl"
+              placeholder="https://…"
+              [attr.aria-invalid]="showError('imageUrl')"
+            />
+            <ng-container *ngTemplateOutlet="error; context: { $implicit: 'imageUrl' }" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-alt"
+              >Image description (alt text)
+              <span class="field__required" aria-hidden="true">*</span></label
+            >
+            <input
+              id="f-alt"
+              class="input"
+              formControlName="imageAlt"
+              [attr.aria-invalid]="showError('imageAlt')"
+            />
+            <ng-container *ngTemplateOutlet="error; context: { $implicit: 'imageAlt' }" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-gallery">Gallery image URLs</label>
+            <textarea
+              id="f-gallery"
+              class="textarea textarea--short"
+              formControlName="galleryUrls"
+              aria-describedby="gallery-hint"
+            ></textarea>
+            <p id="gallery-hint" class="field__hint">Optional. One URL per line.</p>
+          </div>
+          <label class="checkbox"
+            ><input type="checkbox" formControlName="featured" /> Feature on the home page</label
+          >
+        </div>
+      </fieldset>
+
+      @if (saveError()) {
+        <p class="field__error" role="alert">
+          <app-icon name="alert" [size]="16" /> {{ saveError() }}
+        </p>
+      }
+      @if (submitted() && form.invalid) {
+        <p class="field__error" role="alert">
+          <app-icon name="alert" [size]="16" /> Please fix the highlighted fields.
+        </p>
+      }
+
+      <div class="actions">
+        <button type="submit" class="btn btn--primary btn--lg btn--block" [disabled]="saving()">
+          <app-icon name="check" [size]="18" /> {{ isEdit() ? 'Save changes' : 'Add attraction' }}
+        </button>
+        <a routerLink="/admin/attractions" class="btn btn--block">Cancel</a>
+      </div>
+    </aside>
+  </form>
+}

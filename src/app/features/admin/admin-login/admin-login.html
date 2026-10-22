@@ -1,0 +1,70 @@
+<main class="login">
+  <div class="login__card panel">
+    <a routerLink="/" class="login__brand">
+      <app-logo [size]="40" />
+      <span>Kandy Day Trip Planner</span>
+    </a>
+    <h1 class="login__title">Admin demo</h1>
+
+    <div class="notice login__notice" role="note">
+      <app-icon name="lock" [size]="18" />
+      <div>
+        <p><strong>Demo only — not secure.</strong></p>
+        <p>
+          This sign-in runs entirely in your browser and does not protect anything. Changes you make
+          are stored only in this browser and are not sent to a server.
+        </p>
+        <p>
+          Demo credentials: <code>{{ demo.username }}</code> / <code>{{ demo.password }}</code>
+          <button type="button" class="link-btn" (click)="fillDemo()">Fill them in</button>
+        </p>
+      </div>
+    </div>
+
+    <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label class="field__label" for="username">Username</label>
+        <input
+          id="username"
+          class="input"
+          formControlName="username"
+          autocomplete="off"
+          [attr.aria-invalid]="
+            form.controls.username.invalid && (form.controls.username.touched || submitted())
+          "
+        />
+        @if (form.controls.username.invalid && (form.controls.username.touched || submitted())) {
+          <p class="field__error"><app-icon name="alert" [size]="16" /> Enter the demo username.</p>
+        }
+      </div>
+      <div class="field">
+        <label class="field__label" for="password">Password</label>
+        <input
+          id="password"
+          class="input"
+          type="password"
+          formControlName="password"
+          autocomplete="off"
+          [attr.aria-invalid]="
+            form.controls.password.invalid && (form.controls.password.touched || submitted())
+          "
+        />
+        @if (form.controls.password.invalid && (form.controls.password.touched || submitted())) {
+          <p class="field__error"><app-icon name="alert" [size]="16" /> Enter the demo password.</p>
+        }
+      </div>
+
+      @if (failed()) {
+        <p class="field__error" role="alert">
+          <app-icon name="alert" [size]="16" /> Those aren’t the demo credentials shown above.
+        </p>
+      }
+
+      <button type="submit" class="btn btn--primary btn--lg btn--block">Enter admin demo</button>
+    </form>
+
+    <a routerLink="/" class="btn btn--ghost btn--block login__back">
+      <app-icon name="arrow-left" [size]="18" /> Back to the website
+    </a>
+  </div>
+</main>
