@@ -20,6 +20,7 @@ import { ItineraryList } from './itinerary-list/itinerary-list';
 import { RouteMap } from './route-map/route-map';
 import { StartPointPicker } from './start-point-picker/start-point-picker';
 import { TripSummary } from './trip-summary/trip-summary';
+import { WeatherPanel } from './weather-panel/weather-panel';
 
 @Component({
   selector: 'app-my-plan',
@@ -32,6 +33,7 @@ import { TripSummary } from './trip-summary/trip-summary';
     ItineraryList,
     RouteMap,
     TripSummary,
+    WeatherPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './my-plan.scss',

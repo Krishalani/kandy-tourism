@@ -1,0 +1,57 @@
+@let d = day();
+<div class="head">
+  <h3 class="title">{{ heading() }}</h3>
+  <p class="summary">
+    {{ d.summary }} · {{ d.maxTemperatureC | number: '1.0-0' }}° /
+    {{ d.minTemperatureC | number: '1.0-0' }}°
+  </p>
+</div>
+
+@if (advice(); as a) {
+  <p class="notice advice" [class.notice--success]="a.tone === 'good'">
+    <app-icon [name]="a.icon" [size]="18" />
+    <span>{{ a.message }}</span>
+  </p>
+}
+
+@if (hours().length > 0) {
+  <ol #strip class="hours" aria-label="Hourly forecast">
+    @for (h of hours(); track h.time) {
+      @let now = h.hour === currentHour();
+      <li class="hour" [class.hour--now]="now">
+        <span class="hour__time">{{ now ? 'Now' : formatClock(h.time) }}</span>
+        <app-icon [name]="weatherIcon(h.condition, isDaylight(h, d))" [size]="22" />
+        <span class="hour__temp">{{ h.temperatureC | number: '1.0-0' }}°</span>
+        <span class="hour__rain" [class.wet]="(h.precipitationProbability ?? 0) >= 50">
+          {{ h.precipitationProbability ?? '–' }}%
+        </span>
+        <span class="visually-hidden">{{ h.summary }}</span>
+      </li>
+    }
+  </ol>
+}
+
+<dl class="facts">
+  @if (d.sunrise) {
+    <div class="fact">
+      <dt><app-icon name="sunrise" [size]="15" /> Sunrise</dt>
+      <dd>{{ formatClock(d.sunrise) }}</dd>
+    </div>
+  }
+  @if (d.sunset) {
+    <div class="fact">
+      <dt><app-icon name="sunset" [size]="15" /> Sunset</dt>
+      <dd>{{ formatClock(d.sunset) }}</dd>
+    </div>
+  }
+  @if (d.uvIndexMax !== null) {
+    <div class="fact">
+      <dt><app-icon name="sun" [size]="15" /> UV index</dt>
+      <dd>{{ d.uvIndexMax | number: '1.0-0' }} · {{ uvLevel(d.uvIndexMax) }}</dd>
+    </div>
+  }
+  <div class="fact">
+    <dt><app-icon name="umbrella" [size]="15" /> Rain</dt>
+    <dd>{{ d.precipitationMm | number: '1.0-1' }} mm</dd>
+  </div>
+</dl>

@@ -1,0 +1,115 @@
+<section class="panel weather" aria-labelledby="weather-title">
+  <h2 id="weather-title" class="panel__title"><app-icon name="cloud-sun" /> Weather in Kandy</h2>
+
+  @let load = state();
+  @if (load.status === 'loading') {
+    <div class="loading" role="status">
+      <span class="visually-hidden">Loading the weather forecast…</span>
+      <span class="shimmer shimmer--now" aria-hidden="true"></span>
+      <span class="shimmer shimmer--days" aria-hidden="true"></span>
+      <span class="shimmer shimmer--hours" aria-hidden="true"></span>
+    </div>
+  } @else if (load.status === 'error') {
+    <div class="error" role="alert">
+      <app-icon name="alert" [size]="20" />
+      <p>{{ load.message }}</p>
+      <button type="button" class="btn btn--sm" (click)="reload()">
+        <app-icon name="refresh" [size]="16" /> Try again
+      </button>
+    </div>
+  } @else {
+    @let current = load.data.current;
+    <div class="now">
+      <app-icon
+        class="now__icon"
+        [name]="weatherIcon(current.condition, current.isDay)"
+        [size]="56"
+        [strokeWidth]="1.5"
+      />
+      <div class="now__main">
+        <p class="now__temp">
+          {{ current.temperatureC | number: '1.0-0' }}<span class="now__unit">°C</span>
+        </p>
+        <p class="now__summary">{{ current.summary }}</p>
+        <p class="now__feels">Feels like {{ current.apparentTemperatureC | number: '1.0-0' }}°C</p>
+      </div>
+      <dl class="now__facts">
+        <div class="fact">
+          <dt><app-icon name="droplets" [size]="15" /> Humidity</dt>
+          <dd>{{ current.humidityPercent }}%</dd>
+        </div>
+        <div class="fact">
+          <dt><app-icon name="wind" [size]="15" /> Wind</dt>
+          <dd>{{ current.windSpeedKmh | number: '1.0-0' }} km/h</dd>
+        </div>
+        <div class="fact">
+          <dt><app-icon name="umbrella" [size]="15" /> Rain</dt>
+          <dd>{{ current.precipitationMm | number: '1.0-1' }} mm</dd>
+        </div>
+      </dl>
+    </div>
+    <p class="updated">Live conditions · updated {{ updatedAt() }}</p>
+
+    <div class="picker">
+      <label class="field__label" for="weather-date">Check the forecast for your trip date</label>
+      <input
+        id="weather-date"
+        class="input picker__input"
+        type="date"
+        [min]="firstDate()"
+        [max]="lastDate()"
+        [value]="day()?.date ?? ''"
+        aria-describedby="weather-date-hint"
+        (change)="pickDate($event)"
+      />
+      <span id="weather-date-hint" class="field__hint picker__hint">
+        Live forecasts cover today and the next {{ load.data.days.length - 1 }} days.
+      </span>
+    </div>
+    @if (dateError(); as error) {
+      <p class="field__error picker__error" role="alert">
+        <app-icon name="alert" [size]="16" /> {{ error }}
+      </p>
+    }
+
+    <div class="days" role="group" aria-label="This week">
+      @for (d of quickDays(); track d.date) {
+        <button
+          type="button"
+          class="day"
+          [attr.aria-pressed]="d.date === day()?.date"
+          [attr.aria-label]="dayAriaLabel(d)"
+          (click)="selectDay(d.date)"
+        >
+          <span class="day__name">{{ dayName(d.date) }}</span>
+          <app-icon [name]="weatherIcon(d.condition)" [size]="26" [strokeWidth]="1.75" />
+          <span class="day__temps">
+            <strong>{{ d.maxTemperatureC | number: '1.0-0' }}°</strong>
+            {{ d.minTemperatureC | number: '1.0-0' }}°
+          </span>
+          @if (d.precipitationProbability !== null) {
+            <span class="day__rain" [class.wet]="d.precipitationProbability >= 50">
+              <app-icon name="droplets" [size]="12" />{{ d.precipitationProbability }}%
+            </span>
+          }
+        </button>
+      }
+    </div>
+
+    @if (day(); as d) {
+      <app-weather-day
+        [day]="d"
+        [heading]="dayHeading(d.date)"
+        [advice]="advice()"
+        [currentHour]="isToday() ? currentHour() : undefined"
+      />
+    }
+
+    <p class="source">
+      Forecast by
+      <a href="https://open-meteo.com/" target="_blank" rel="noopener"
+        >Open-Meteo<span class="visually-hidden"> (opens in a new tab)</span></a
+      >. Hill-country weather can change quickly, so check again on the day.
+    </p>
+  }
+</section>

@@ -1,4 +1,5 @@
 import { SiteInfo } from '../models/site-info.model';
+import { WeatherLocation } from '../models/weather.model';
 
 /**
  * Static page content (not attraction data, which comes from the Web API).
@@ -34,6 +35,14 @@ export const ABOUT_IMAGE = {
     label: 'Wikimedia Commons',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:View_point_of_Kandy.jpg',
   },
+};
+
+/** Where the My Plan weather forecast is for (Kandy City Centre, the default starting point). */
+export const WEATHER_LOCATION: WeatherLocation = {
+  name: 'Kandy',
+  latitude: 7.2931,
+  longitude: 80.6347,
+  timeZone: 'Asia/Colombo',
 };
 
 /**
