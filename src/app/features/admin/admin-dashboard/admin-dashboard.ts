@@ -7,10 +7,11 @@ import { toLoadState } from '../../../core/utils/load-state';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ErrorState } from '../../../shared/components/state/error-state';
 import { LoadingState } from '../../../shared/components/state/loading-state';
+import { TripFeedbackPanel } from './trip-feedback-panel';
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [RouterLink, DatePipe, Icon, ErrorState, LoadingState],
+  imports: [RouterLink, DatePipe, Icon, ErrorState, LoadingState, TripFeedbackPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './admin-dashboard.scss',
   templateUrl: './admin-dashboard.html',

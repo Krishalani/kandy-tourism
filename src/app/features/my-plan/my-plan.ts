@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  computed,
   inject,
   signal,
   viewChild,
@@ -14,6 +15,9 @@ import { TripPlanService } from '../../core/services/trip-plan.service';
 import { suggestShorterOrder, totalStraightLineKm } from '../../core/utils/route-planner';
 import { Icon } from '../../shared/components/icon/icon';
 import { TripDatePicker } from '../../shared/components/trip-date-picker/trip-date-picker';
+import { ItineraryTimeline } from '../../shared/components/itinerary-timeline/itinerary-timeline';
+import { TripLifecycleService } from '../../core/services/trip-lifecycle.service';
+import { formatTripDate } from '../../core/utils/trip-date';
 import { EmptyState } from '../../shared/components/state/empty-state';
 import { ErrorState } from '../../shared/components/state/error-state';
 import { ItineraryList } from './itinerary-list/itinerary-list';
@@ -31,6 +35,7 @@ import { WeatherPanel } from './weather-panel/weather-panel';
     ErrorState,
     StartPointPicker,
     TripDatePicker,
+    ItineraryTimeline,
     ItineraryList,
     RouteMap,
     TripSummary,
@@ -42,6 +47,14 @@ import { WeatherPanel } from './weather-panel/weather-panel';
 })
 export default class MyPlan {
   protected readonly plan = inject(TripPlanService);
+  protected readonly lifecycle = inject(TripLifecycleService);
+
+  /** e.g. "4 stops on Sunday 25 October 2026." */
+  protected readonly lockedSummary = computed(() => {
+    const count = this.plan.count();
+    const date = this.plan.tripDate();
+    return `${count} ${count === 1 ? 'stop' : 'stops'}${date ? ` on ${formatTripDate(date)}` : ''}.`;
+  });
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly pdf = inject(ItineraryPdfService);

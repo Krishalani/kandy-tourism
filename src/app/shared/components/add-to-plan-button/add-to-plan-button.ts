@@ -68,6 +68,11 @@ export class AddToPlanButton {
   protected async toggle(): Promise<void> {
     const attraction = this.attraction();
 
+    if (this.plan.isLocked()) {
+      this.showLocked();
+      return;
+    }
+
     if (this.inPlan()) {
       const confirmed = await this.confirm.confirm(
         removeStopConfirmation(
@@ -104,6 +109,21 @@ export class AddToPlanButton {
           { tone: 'error' },
         );
         break;
+      case 'locked':
+        this.showLocked();
+        break;
     }
+  }
+
+  private showLocked(): void {
+    this.toast.show(
+      this.plan.status() === 'completed'
+        ? 'Your trip is completed. Start a new plan to add places for another day.'
+        : 'Your trip is confirmed. Choose “Change plan” on your trip page to edit it.',
+      {
+        tone: 'info',
+        action: { label: 'View trip', run: () => this.router.navigateByUrl('/my-plan/ready') },
+      },
+    );
   }
 }

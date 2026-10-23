@@ -96,6 +96,28 @@
   margin: 0;
 }
 
+.locked {
+  border-color: var(--color-gold-400);
+  box-shadow:
+    inset 4px 0 0 var(--color-gold-400),
+    var(--shadow-sm);
+}
+
+.locked__title {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-xl);
+}
+
+.locked__text {
+  color: var(--color-text-muted);
+}
+
+.locked__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 .finish {
   display: flex;
   flex-wrap: wrap;

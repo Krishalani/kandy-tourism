@@ -54,6 +54,7 @@ export function itinerary(
     start,
     stops: stops.map((a, i) => ({ order: i + 1, attraction: a })),
     maxStops: 10,
+    status: 'planning',
     updatedAtUtc: '2026-10-23T00:00:00Z',
   };
 }

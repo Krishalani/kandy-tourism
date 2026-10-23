@@ -11,7 +11,8 @@
     @if (plan.restored() && plan.count() > 0) {
       <div class="page-header__actions no-print">
         <a routerLink="/my-plan/ready" class="btn btn--sm btn--primary">
-          <app-icon name="check" [size]="16" /> Finish planning
+          <app-icon name="check" [size]="16" />
+          {{ plan.isLocked() ? 'View my trip' : 'Finish planning' }}
         </a>
         <button
           type="button"
@@ -22,9 +23,11 @@
           <app-icon name="download" [size]="16" />
           {{ downloadingPdf() ? 'Preparing PDF…' : 'Download itinerary (PDF)' }}
         </button>
-        <button type="button" class="btn btn--sm btn--danger" (click)="clearPlan()">
-          <app-icon name="trash" [size]="16" /> Clear plan
-        </button>
+        @if (!plan.isLocked()) {
+          <button type="button" class="btn btn--sm btn--danger" (click)="clearPlan()">
+            <app-icon name="trash" [size]="16" /> Clear plan
+          </button>
+        }
       </div>
     }
   </div>
@@ -63,6 +66,56 @@
         {{ addingSample() ? 'Adding sample day…' : 'Try a sample day' }}
       </button>
     </app-empty-state>
+  </div>
+} @else if (plan.isLocked()) {
+  @let completed = plan.status() === 'completed';
+  <div class="container plan-layout">
+    <div class="plan-main">
+      <section class="panel locked" aria-labelledby="locked-title">
+        <span class="badge" [class.badge--gold]="!completed">
+          <app-icon [name]="completed ? 'star' : 'check'" [size]="14" />
+          {{ completed ? 'Completed' : 'Confirmed' }}
+        </span>
+        <h2 id="locked-title" class="locked__title">
+          {{ completed ? 'This trip is completed' : 'Your trip is confirmed' }}
+        </h2>
+        <p class="locked__text">
+          {{ lockedSummary() }}
+          {{
+            completed
+              ? 'Thanks for your feedback! Start a new plan for another day.'
+              : 'The plan is locked so nothing changes by accident.'
+          }}
+        </p>
+        <div class="locked__actions">
+          <a routerLink="/my-plan/ready" class="btn btn--primary">
+            <app-icon name="arrow-right" [size]="18" /> Go to my trip
+          </a>
+          @if (completed) {
+            <button type="button" class="btn" (click)="lifecycle.startNewPlan()">
+              <app-icon name="refresh" [size]="18" /> Plan another day
+            </button>
+          } @else {
+            <button type="button" class="btn" (click)="lifecycle.changePlan()">
+              <app-icon name="edit" [size]="18" /> Change plan
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="locked-route-title">
+        <h2 id="locked-route-title" class="panel__title"><app-icon name="route" /> Your day</h2>
+        <app-itinerary-timeline [startLabel]="plan.resolvedStart().label" [stops]="plan.stops()" />
+      </section>
+
+      @if (!completed) {
+        <app-weather-panel class="no-print" />
+      }
+    </div>
+
+    <section class="plan-map no-print" aria-label="Route preview">
+      <app-route-map [start]="plan.resolvedStart()" [stops]="plan.stops()" />
+    </section>
   </div>
 } @else {
   <div class="container plan-layout">

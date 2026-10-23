@@ -1,35 +1,52 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
+import { CompleteTripRequest } from '../../core/models/trip-plan.model';
 import { ItineraryPdfService } from '../../core/pdf/itinerary-pdf.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
+import { TripLifecycleService } from '../../core/services/trip-lifecycle.service';
 import { TripPlanService } from '../../core/services/trip-plan.service';
 import { WeatherService } from '../../core/services/weather.service';
-import { formatTripDate, sriLankaToday } from '../../core/utils/trip-date';
+import { formatTripDate, relativeTripDay, sriLankaToday } from '../../core/utils/trip-date';
 import { planningAdvice } from '../../core/utils/weather';
 import { Icon } from '../../shared/components/icon/icon';
 import { ItineraryTimeline } from '../../shared/components/itinerary-timeline/itinerary-timeline';
+import { RATING_LABELS, StarDisplay } from '../../shared/components/star-rating/star-rating';
 import { EmptyState } from '../../shared/components/state/empty-state';
 import { TripDatePicker } from '../../shared/components/trip-date-picker/trip-date-picker';
-import { isPlanReady, planChecklist } from './plan-checklist';
+import { ChecklistStatus, isPlanReady, planChecklist } from './plan-checklist';
+import { TripFeedbackForm } from './trip-feedback-form';
 
-/** The end of the planning journey: a final check, then the PDF, directions and a share link. */
+type StepState = 'done' | 'current' | 'todo';
+
+/**
+ * The end of the planning journey and the trip itself: a final check and confirmation, the PDF,
+ * directions and share link, then feedback that completes the trip.
+ */
 @Component({
   selector: 'app-plan-ready',
-  imports: [RouterLink, Icon, EmptyState, TripDatePicker, ItineraryTimeline],
+  imports: [
+    RouterLink,
+    Icon,
+    EmptyState,
+    TripDatePicker,
+    ItineraryTimeline,
+    TripFeedbackForm,
+    StarDisplay,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './plan-ready.scss',
   templateUrl: './plan-ready.html',
 })
 export default class PlanReady {
   protected readonly plan = inject(TripPlanService);
+  protected readonly lifecycle = inject(TripLifecycleService);
   private readonly pdf = inject(ItineraryPdfService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
-  private readonly router = inject(Router);
   private readonly origin = inject(DOCUMENT).location.origin;
 
   private readonly today = sriLankaToday();
@@ -69,6 +86,50 @@ export default class PlanReady {
   });
 
   protected readonly ready = computed(() => isPlanReady(this.checklist()));
+  protected readonly tripDateLabel = computed(() => {
+    const date = this.plan.tripDate();
+    return date ? formatTripDate(date) : '';
+  });
+  /** A confirmed trip can be completed from its trip day onwards. */
+  protected readonly canComplete = computed(() => {
+    const date = this.plan.tripDate();
+    return this.plan.status() === 'confirmed' && date !== null && date <= this.today;
+  });
+
+  protected readonly steps = computed<{ label: string; state: StepState }[]>(() => {
+    const status = this.plan.status();
+    return [
+      { label: 'Plan your day', state: status === 'planning' ? 'current' : 'done' },
+      {
+        label: 'Confirm your trip',
+        state: status === 'planning' ? 'todo' : status === 'confirmed' ? 'current' : 'done',
+      },
+      { label: 'Rate & complete', state: status === 'completed' ? 'done' : 'todo' },
+    ];
+  });
+
+  protected readonly eyebrow = computed(() => {
+    switch (this.plan.status()) {
+      case 'confirmed':
+        return 'Trip confirmed';
+      case 'completed':
+        return 'Trip completed';
+      default:
+        return 'Finish planning';
+    }
+  });
+
+  protected readonly heading = computed(() => {
+    switch (this.plan.status()) {
+      case 'confirmed':
+        return this.canComplete() ? 'How was your day in Kandy?' : 'You’re all set!';
+      case 'completed':
+        return 'Thanks for travelling with us!';
+      default:
+        return this.ready() ? 'Your Kandy day is ready!' : 'Almost ready';
+    }
+  });
+
   /** e.g. "4 stops from Kandy City Centre on Sunday 25 October 2026." */
   protected readonly overview = computed(() => {
     const count = this.plan.count();
@@ -78,13 +139,63 @@ export default class PlanReady {
       `${date ? ` on ${formatTripDate(date)}` : ''}.`
     );
   });
+
+  protected readonly leadNote = computed(() => {
+    const date = this.plan.tripDate();
+    switch (this.plan.status()) {
+      case 'confirmed':
+        return this.canComplete()
+          ? 'Rate your day below to complete your trip.'
+          : `Your trip is ${date ? relativeTripDay(date, this.today) : 'coming up'}, and the plan is locked so nothing changes by accident.`;
+      case 'completed':
+        return 'Your feedback helps other visitors plan their day.';
+      default:
+        return 'Check the list below, then confirm your trip.';
+    }
+  });
+
   protected readonly shareUrl = computed(() => {
     const id = this.plan.shareId();
     return id ? `${this.origin}/trip/${id}` : null;
   });
 
+  private readonly stopRatings = computed(
+    () => new Map(this.plan.feedback()?.stopRatings.map((r) => [r.attractionId, r.rating]) ?? []),
+  );
+
   protected readonly downloadingPdf = signal(false);
   protected readonly sharing = signal(false);
+  protected readonly confirming = signal(false);
+  protected readonly completing = signal(false);
+
+  protected checkPrefix(status: ChecklistStatus): string {
+    return { done: 'Done: ', todo: 'To do: ', warn: 'Check: ', info: '' }[status];
+  }
+
+  protected ratingLabel(rating: number): string {
+    return `${rating} out of 5 · ${RATING_LABELS[rating - 1]}`;
+  }
+
+  protected stopRating(attractionId: number): number | undefined {
+    return this.stopRatings().get(attractionId);
+  }
+
+  protected async confirmTrip(): Promise<void> {
+    this.confirming.set(true);
+    if (await this.lifecycle.confirmTrip()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    this.confirming.set(false);
+  }
+
+  protected async complete(request: CompleteTripRequest): Promise<void> {
+    this.completing.set(true);
+    if (await this.plan.completeTrip(request)) {
+      this.toast.show('Thank you for your feedback! Your trip is complete.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    this.completing.set(false);
+  }
 
   protected async downloadPdf(): Promise<void> {
     this.downloadingPdf.set(true);
@@ -148,34 +259,5 @@ export default class PlanReady {
       this.toast.show('Sharing is off. The old link no longer works.', { tone: 'info' });
     }
     this.sharing.set(false);
-  }
-
-  /** Clears this plan (stops, date and share link) so the tourist can plan another day. */
-  protected async startNewPlan(): Promise<void> {
-    const count = this.plan.count();
-    const confirmed = await this.confirm.confirm({
-      title: 'Start a new plan?',
-      message:
-        `This clears the ${count} ${count === 1 ? 'stop' : 'stops'} in your current plan` +
-        `${this.plan.shareId() ? ' and turns off its share link' : ''}. ` +
-        'Download the PDF first if you’d like to keep a copy.',
-      confirmLabel: 'Start a new plan',
-      cancelLabel: 'Keep this plan',
-      tone: 'danger',
-    });
-    if (!confirmed) {
-      return;
-    }
-    if (this.plan.shareId()) {
-      void this.plan.disableSharing();
-    }
-    if (this.plan.tripDate()) {
-      void this.plan.setTripDate(null);
-    }
-    this.plan.clear();
-    this.toast.show('Your previous plan has been cleared. Add places for your next day.', {
-      tone: 'info',
-    });
-    void this.router.navigateByUrl('/explore');
   }
 }

@@ -5,9 +5,11 @@ import { SAMPLE_DAY_SLUGS } from '../data/site-content';
 import { AttractionSummary } from '../models/attraction.model';
 import {
   AddToPlanResult,
+  CompleteTripRequest,
   GeoPoint,
   GuestPlanRef,
   Itinerary,
+  ItineraryStatus,
   ResolvedStart,
   StartPoint,
 } from '../models/trip-plan.model';
@@ -99,6 +101,10 @@ export class TripPlanService {
   readonly tripDate = computed(() => this.view()?.tripDate ?? null);
   /** ID of the read-only share link, while sharing is on. */
   readonly shareId = computed(() => this.view()?.shareId ?? null);
+  readonly status = computed<ItineraryStatus>(() => this.view()?.status ?? 'planning');
+  /** Confirmed and completed trips can't change their stops, start or date. */
+  readonly isLocked = computed(() => this.status() !== 'planning');
+  readonly feedback = computed(() => this.view()?.feedback ?? null);
 
   readonly stops = computed(() => numberStops(this.view()?.stops.map((s) => s.attraction) ?? []));
   readonly count = computed(() => this.stops().length);
@@ -133,6 +139,9 @@ export class TripPlanService {
   }
 
   add(attraction: AttractionSummary): AddToPlanResult {
+    if (this.isLocked()) {
+      return 'locked';
+    }
     const ids = this.currentIds();
     if (ids.includes(attraction.id)) {
       return 'duplicate';
@@ -162,7 +171,7 @@ export class TripPlanService {
   /** Removes a stop and returns its former index (or -1), which `insertAt` can use for undo. */
   remove(attractionId: number): number {
     const index = this.currentIds().indexOf(attractionId);
-    if (index === -1) {
+    if (index === -1 || this.isLocked()) {
       return -1;
     }
     void this.save(
@@ -268,6 +277,36 @@ export class TripPlanService {
       (ref) => this.api.disableSharing(ref),
       'Sharing couldn’t be turned off.',
     );
+  }
+
+  /** Locks the finished plan for the trip day; resolves to false if the API refused (the tourist is told why). */
+  confirmTrip(): Promise<boolean> {
+    return this.save(null, (ref) => this.api.confirm(ref), 'Your trip couldn’t be confirmed.');
+  }
+
+  /** Unlocks a confirmed trip so it can be edited again. */
+  reopenTrip(): Promise<boolean> {
+    return this.save(null, (ref) => this.api.reopen(ref), 'Your plan couldn’t be reopened.');
+  }
+
+  completeTrip(request: CompleteTripRequest): Promise<boolean> {
+    return this.save(
+      null,
+      (ref) => this.api.complete(ref, request),
+      'Your feedback couldn’t be saved.',
+    );
+  }
+
+  /**
+   * Starts an empty plan for another day. The previous plan (and any feedback) stays on the
+   * server; this browser simply stops using it. A new plan is created with the first stop.
+   */
+  startNewPlan(): Promise<void> {
+    return this.enqueue(async () => {
+      this.forgetPlan();
+      this.sessionLocation.set(null);
+      this.view.set(null);
+    });
   }
 
   /** Loads (or reloads) the saved plan from the API. */
@@ -393,6 +432,7 @@ function emptyItinerary(): Itinerary {
     start: { type: 'preset', label: '', coordinatesApproximate: false },
     stops: [],
     maxStops: MAX_ITINERARY_STOPS,
+    status: 'planning',
     updatedAtUtc: '',
   };
 }

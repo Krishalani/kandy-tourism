@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { apiUrl } from '../api/api';
 import {
+  CompleteTripRequest,
   CreatedItinerary,
   GuestPlanRef,
   Itinerary,
@@ -76,6 +77,18 @@ export class ItineraryApiService {
 
   disableSharing(ref: GuestPlanRef): Observable<Itinerary> {
     return this.http.delete<Itinerary>(this.url(ref, '/share'), this.options(ref));
+  }
+
+  confirm(ref: GuestPlanRef): Observable<Itinerary> {
+    return this.http.post<Itinerary>(this.url(ref, '/confirm'), {}, this.options(ref));
+  }
+
+  reopen(ref: GuestPlanRef): Observable<Itinerary> {
+    return this.http.post<Itinerary>(this.url(ref, '/reopen'), {}, this.options(ref));
+  }
+
+  complete(ref: GuestPlanRef, request: CompleteTripRequest): Observable<Itinerary> {
+    return this.http.post<Itinerary>(this.url(ref, '/complete'), request, this.options(ref));
   }
 
   /** A shared plan, read-only. Needs no token. */

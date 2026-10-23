@@ -259,6 +259,63 @@ describe('TripPlanService', () => {
     expect(await disabling).toBe(true);
   });
 
+  it('confirms, locks and completes a trip', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush({ ...itinerary([LAKE]), tripDate: '2026-10-23' });
+    await restoring;
+
+    const confirming = plan.confirmTrip();
+    (await expectRequest('POST', `${planUrl}/confirm`)).flush({
+      ...itinerary([LAKE]),
+      tripDate: '2026-10-23',
+      status: 'confirmed',
+    });
+    expect(await confirming).toBe(true);
+    expect(plan.isLocked()).toBe(true);
+
+    // A confirmed trip can't change; nothing is sent to the API.
+    expect(plan.add(TEMPLE)).toBe('locked');
+    expect(plan.remove(LAKE.id)).toBe(-1);
+
+    const completing = plan.completeTrip({
+      rating: 5,
+      comment: 'Lovely',
+      stopRatings: [{ attractionId: LAKE.id, rating: 4 }],
+    });
+    const complete = await expectRequest('POST', `${planUrl}/complete`);
+    expect(complete.request.body).toEqual({
+      rating: 5,
+      comment: 'Lovely',
+      stopRatings: [{ attractionId: LAKE.id, rating: 4 }],
+    });
+    complete.flush({
+      ...itinerary([LAKE]),
+      status: 'completed',
+      feedback: {
+        rating: 5,
+        comment: 'Lovely',
+        stopRatings: [{ attractionId: LAKE.id, rating: 4 }],
+        submittedAtUtc: '2026-10-23T15:00:00Z',
+      },
+    });
+    expect(await completing).toBe(true);
+    expect(plan.status()).toBe('completed');
+    expect(plan.feedback()?.rating).toBe(5);
+  });
+
+  it('starts a new plan without touching the completed one', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush({ ...itinerary([LAKE]), status: 'completed' });
+    await restoring;
+
+    await plan.startNewPlan();
+    expect(plan.count()).toBe(0);
+    expect(plan.status()).toBe('planning');
+    expect(localStorage.getItem(GUEST_PLAN_STORAGE_KEY)).toBeNull();
+  });
+
   it('forgets a plan the server no longer has', async () => {
     storeRef();
     const restoring = plan.restore();

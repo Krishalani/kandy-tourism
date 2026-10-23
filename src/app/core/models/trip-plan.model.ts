@@ -46,7 +46,8 @@ export interface ItinerarySummary {
   stopsWithoutDuration: number;
 }
 
-export type AddToPlanResult = 'added' | 'duplicate' | 'full';
+/** `locked`: the trip is confirmed or completed, so its stops can't change. */
+export type AddToPlanResult = 'added' | 'duplicate' | 'full' | 'locked';
 
 /** Starting point as persisted and resolved by the API (`ItineraryStartDto`). */
 export interface ItineraryStartDto {
@@ -70,7 +71,33 @@ export interface Itinerary {
   tripDate?: string;
   /** Set while a read-only share link is active. */
   shareId?: string;
+  status: ItineraryStatus;
+  confirmedAtUtc?: string;
+  completedAtUtc?: string;
+  feedback?: TripFeedback;
   updatedAtUtc: string;
+}
+
+/** `planning` can be edited; `confirmed` is locked for the trip day; `completed` has feedback. */
+export type ItineraryStatus = 'planning' | 'confirmed' | 'completed';
+
+export interface StopRating {
+  attractionId: number;
+  rating: number;
+}
+
+export interface TripFeedback {
+  rating: number;
+  comment?: string;
+  stopRatings: StopRating[];
+  submittedAtUtc: string;
+}
+
+/** Body of `POST /itineraries/{id}/complete`. */
+export interface CompleteTripRequest {
+  rating: number;
+  comment?: string;
+  stopRatings: StopRating[];
 }
 
 /** A plan opened through its read-only share link (`SharedItineraryDto`). */
@@ -79,6 +106,7 @@ export interface SharedItinerary {
   start: ItineraryStartDto;
   stops: { order: number; attraction: AttractionSummary }[];
   tripDate?: string;
+  status: ItineraryStatus;
   updatedAtUtc: string;
 }
 
