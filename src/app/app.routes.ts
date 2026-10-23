@@ -38,6 +38,16 @@ export const routes: Routes = [
             title: `Edit attraction | ${SITE}`,
             loadComponent: () => import('./features/admin/attraction-form/attraction-form'),
           },
+          {
+            path: 'messages',
+            title: `Messages | ${SITE}`,
+            loadComponent: () => import('./features/admin/admin-messages/admin-messages'),
+          },
+          {
+            path: 'messages/:id',
+            title: `Contact messages | ${SITE}`,
+            loadComponent: () => import('./features/admin/admin-contact/admin-contact'),
+          },
         ],
       },
     ],

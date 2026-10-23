@@ -95,4 +95,5 @@ src/testing              test fixtures (unit tests only)
 - A typed starting address is passed to Google Maps as text and isn't shown on the preview map.
 - Plans are limited to 10 stops (the Google Maps link limit).
 - Admin sign-in lasts until the token expires (60 minutes) or the page is reloaded.
-- The contact form doesn't send anything.
+- Contact-form messages are stored by the API and read in Admin → Messages; no email
+  notification is sent, and admins reply from their own mail client.

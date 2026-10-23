@@ -37,6 +37,14 @@ import { Logo } from '../../../shared/components/logo/logo';
                 >
               </li>
               <li>
+                <a
+                  routerLink="/admin/messages"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="mail" [size]="16" /> Messages</a
+                >
+              </li>
+              <li>
                 <a routerLink="/"><app-icon name="eye" [size]="16" /> View site</a>
               </li>
               <li>

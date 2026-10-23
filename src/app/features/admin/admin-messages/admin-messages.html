@@ -1,0 +1,117 @@
+<div class="heading">
+  <h1>Messages</h1>
+  <p class="muted">Contact-form messages, grouped by the sender’s email address.</p>
+</div>
+
+<div class="toolbar panel" role="search" aria-label="Filter messages">
+  <div class="field">
+    <label class="field__label" for="message-search">Search</label>
+    <input
+      id="message-search"
+      class="input"
+      type="search"
+      placeholder="Name or email"
+      maxlength="100"
+      [value]="query()"
+      (input)="setQuery($any($event.target).value)"
+    />
+  </div>
+  <div class="field">
+    <label class="field__label" for="message-status">Show</label>
+    <select id="message-status" class="select" (change)="setStatus($any($event.target).value)">
+      <option value="all" [selected]="status() === 'all'">All contacts</option>
+      <option value="unread" [selected]="status() === 'unread'">With unread messages</option>
+    </select>
+  </div>
+</div>
+
+@let s = state();
+@if (s.status === 'loading') {
+  <p class="count" role="status">Loading messages…</p>
+} @else if (s.status === 'error') {
+  <app-error-state [message]="s.message" />
+} @else if (s.data.items.length === 0) {
+  <app-empty-state
+    icon="mail"
+    [title]="hasFilters() ? 'No contacts match' : 'No messages yet'"
+    [message]="
+      hasFilters()
+        ? 'Try a different search or show all contacts.'
+        : 'Messages sent through the website’s contact form will appear here.'
+    "
+    [compact]="true"
+  />
+} @else {
+  <p class="count" aria-live="polite">
+    {{ s.data.totalCount }} {{ s.data.totalCount === 1 ? 'contact' : 'contacts' }}
+  </p>
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="visually-hidden">
+        People who used the contact form
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Contact</th>
+          <th scope="col">Messages</th>
+          <th scope="col">Latest subject</th>
+          <th scope="col">Last message</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of s.data.items; track c.id) {
+          <tr [class.unread]="c.unreadCount > 0">
+            <td data-label="Contact">
+              <a class="contact" [routerLink]="['/admin/messages', c.id]">{{ c.name }}</a>
+              <span class="email">{{ c.email }}</span>
+            </td>
+            <td data-label="Messages">
+              <span>
+                {{ c.messageCount }}
+                @if (c.unreadCount > 0) {
+                  <span class="badge badge--gold">{{ c.unreadCount }} new</span>
+                }
+              </span>
+            </td>
+            <td data-label="Latest subject" class="subject">{{ c.lastSubject }}</td>
+            <td data-label="Last message">
+              <time [attr.datetime]="c.lastMessageAtUtc">{{
+                c.lastMessageAtUtc | date: 'd MMM y, h:mm a'
+              }}</time>
+            </td>
+            <td class="actions">
+              <a class="btn btn--sm" [routerLink]="['/admin/messages', c.id]">
+                <app-icon name="eye" [size]="14" /> Open<span class="visually-hidden"
+                  >: messages from {{ c.name }}</span
+                >
+              </a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (s.data.totalPages > 1) {
+    <nav class="pager" aria-label="Pages">
+      <button
+        type="button"
+        class="btn btn--sm"
+        [disabled]="s.data.page <= 1"
+        (click)="goTo(s.data.page - 1)"
+      >
+        <app-icon name="arrow-left" [size]="14" /> Previous
+      </button>
+      <span>Page {{ s.data.page }} of {{ s.data.totalPages }}</span>
+      <button
+        type="button"
+        class="btn btn--sm"
+        [disabled]="!s.data.hasNextPage"
+        (click)="goTo(s.data.page + 1)"
+      >
+        Next <app-icon name="arrow-right" [size]="14" />
+      </button>
+    </nav>
+  }
+}

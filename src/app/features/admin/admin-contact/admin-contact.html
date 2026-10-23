@@ -1,0 +1,102 @@
+<a routerLink="/admin/messages" class="back"
+  ><app-icon name="arrow-left" [size]="16" /> All messages</a
+>
+
+@let s = state();
+@if (s.status === 'loading') {
+  <app-loading-state label="Loading messages" [count]="1" />
+} @else if (s.status === 'error') {
+  <app-error-state
+    title="We couldn’t load this contact"
+    [message]="s.message"
+    [retryable]="true"
+    (retry)="load()"
+  >
+    <a routerLink="/admin/messages" class="btn">Back to messages</a>
+  </app-error-state>
+} @else {
+  @let c = s.data;
+  <section class="panel profile" aria-labelledby="contact-name">
+    <div class="profile__who">
+      <span class="avatar" aria-hidden="true">{{ initials(c.name) }}</span>
+      <div>
+        <h1 id="contact-name">{{ c.name }}</h1>
+        <a class="profile__email" [href]="'mailto:' + c.email">{{ c.email }}</a>
+      </div>
+    </div>
+
+    <dl class="profile__facts">
+      <div>
+        <dt>Messages</dt>
+        <dd>{{ c.messages.length }}</dd>
+      </div>
+      <div>
+        <dt>Unread</dt>
+        <dd>{{ c.unreadCount }}</dd>
+      </div>
+      <div>
+        <dt>First contact</dt>
+        <dd>{{ c.firstContactedAtUtc | date: 'd MMM y' }}</dd>
+      </div>
+      <div>
+        <dt>Last message</dt>
+        <dd>{{ c.lastMessageAtUtc | date: 'd MMM y, h:mm a' }}</dd>
+      </div>
+    </dl>
+
+    <div class="profile__actions">
+      <a class="btn btn--primary btn--sm" [href]="replyLink(c, c.messages[0]?.subject)">
+        <app-icon name="send" [size]="14" /> Reply by email
+      </a>
+      @if (c.unreadCount > 0) {
+        <button type="button" class="btn btn--sm" [disabled]="busy()" (click)="setAllRead(true)">
+          <app-icon name="check" [size]="14" /> Mark all as read
+        </button>
+      } @else {
+        <button type="button" class="btn btn--sm" [disabled]="busy()" (click)="setAllRead(false)">
+          <app-icon name="mail" [size]="14" /> Mark all as unread
+        </button>
+      }
+      <button type="button" class="btn btn--sm btn--danger" [disabled]="busy()" (click)="remove(c)">
+        <app-icon name="trash" [size]="14" /> Delete contact
+      </button>
+    </div>
+  </section>
+
+  <h2 class="thread-title">Messages <span class="muted">· newest first</span></h2>
+  <ol class="thread">
+    @for (m of c.messages; track m.id) {
+      <li class="panel message" [class.message--unread]="!m.isRead">
+        <div class="message__head">
+          <h3 class="message__subject">
+            @if (!m.isRead) {
+              <span class="badge badge--gold">New</span>
+            }
+            {{ m.subject }}
+          </h3>
+          <time class="message__time" [attr.datetime]="m.receivedAtUtc">{{
+            m.receivedAtUtc | date: 'd MMM y, h:mm a'
+          }}</time>
+        </div>
+        <p class="message__body">{{ m.message }}</p>
+        <div class="message__actions">
+          <a class="btn btn--sm btn--ghost" [href]="replyLink(c, m.subject)">
+            <app-icon name="send" [size]="14" /> Reply<span class="visually-hidden"
+              >: {{ m.subject }}</span
+            >
+          </a>
+          <button
+            type="button"
+            class="btn btn--sm btn--ghost"
+            [disabled]="busy()"
+            (click)="setRead(m, !m.isRead)"
+          >
+            <app-icon [name]="m.isRead ? 'mail' : 'check'" [size]="14" />
+            {{ m.isRead ? 'Mark as unread' : 'Mark as read'
+            }}<span class="visually-hidden">: {{ m.subject }}</span>
+          </button>
+        </div>
+      </li>
+    }
+  </ol>
+}

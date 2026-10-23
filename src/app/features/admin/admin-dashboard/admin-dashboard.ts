@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { categoryIcon } from '../../../core/models/attraction.model';
@@ -9,7 +10,7 @@ import { LoadingState } from '../../../shared/components/state/loading-state';
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [RouterLink, Icon, ErrorState, LoadingState],
+  imports: [RouterLink, DatePipe, Icon, ErrorState, LoadingState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './admin-dashboard.scss',
   templateUrl: './admin-dashboard.html',

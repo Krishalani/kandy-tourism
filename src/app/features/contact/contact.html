@@ -10,13 +10,14 @@
 
 <section class="container contact">
   <div class="panel contact__form-panel">
-    @if (sentTo(); as name) {
+    @if (sent(); as sender) {
       <div id="contact-success" class="success" tabindex="-1" role="status">
         <span class="success__icon"><app-icon name="check" [size]="28" /></span>
-        <h2>Thank you, {{ name }}!</h2>
+        <h2>Thank you, {{ sender.name }}!</h2>
         <p>
-          Your message passed validation. <strong>This is a frontend demo</strong>, so it was not
-          sent or stored anywhere and no email has been delivered.
+          Your message has been sent to our team. We’ll reply to
+          <strong>{{ sender.email }}</strong
+          >.
         </p>
         <button type="button" class="btn" (click)="sendAnother()">Write another message</button>
       </div>
@@ -24,7 +25,7 @@
       <h2 class="contact__title">Send a message</h2>
       <p class="notice notice--info">
         <app-icon name="info" [size]="18" />
-        <span>Demo form: submissions are validated in your browser but not sent anywhere.</span>
+        <span>We only use your name and email to reply to your message.</span>
       </p>
 
       <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -45,7 +46,8 @@
             />
             @if (showError(form.controls.name)) {
               <p id="name-error" class="field__error">
-                <app-icon name="alert" [size]="16" /> Please enter your name.
+                <app-icon name="alert" [size]="16" />
+                {{ form.controls.name.getError('server') ?? 'Please enter your name.' }}
               </p>
             }
           </div>
@@ -68,7 +70,9 @@
             @if (showError(form.controls.email)) {
               <p id="email-error" class="field__error">
                 <app-icon name="alert" [size]="16" />
-                @if (form.controls.email.hasError('required')) {
+                @if (form.controls.email.hasError('server')) {
+                  {{ form.controls.email.getError('server') }}
+                } @else if (form.controls.email.hasError('required')) {
                   Please enter your email address.
                 } @else {
                   Please enter a valid email address, like name&#64;example.com.
@@ -93,7 +97,8 @@
           />
           @if (showError(form.controls.subject)) {
             <p id="subject-error" class="field__error">
-              <app-icon name="alert" [size]="16" /> Please add a subject.
+              <app-icon name="alert" [size]="16" />
+              {{ form.controls.subject.getError('server') ?? 'Please add a subject.' }}
             </p>
           }
         </div>
@@ -117,7 +122,9 @@
           @if (showError(form.controls.message)) {
             <p id="message-error" class="field__error">
               <app-icon name="alert" [size]="16" />
-              @if (form.controls.message.hasError('required')) {
+              @if (form.controls.message.hasError('server')) {
+                {{ form.controls.message.getError('server') }}
+              } @else if (form.controls.message.hasError('required')) {
                 Please write a message.
               } @else {
                 Your message is a little short — please add a few more words.
@@ -128,9 +135,16 @@
 
         <p class="field__hint"><span aria-hidden="true">*</span> Required field</p>
 
+        @if (sendError()) {
+          <p class="field__error" role="alert">
+            <app-icon name="alert" [size]="16" /> {{ sendError() }}
+          </p>
+        }
+
         <div>
-          <button type="submit" class="btn btn--primary btn--lg">
-            <app-icon name="send" [size]="18" /> Send message
+          <button type="submit" class="btn btn--primary btn--lg" [disabled]="sending()">
+            <app-icon name="send" [size]="18" />
+            {{ sending() ? 'Sending…' : 'Send message' }}
           </button>
         </div>
       </form>

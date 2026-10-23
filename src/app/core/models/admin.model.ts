@@ -1,3 +1,5 @@
+import { RecentContactMessage } from './contact.model';
+
 export interface AdminProfile {
   id: number;
   email: string;
@@ -20,4 +22,8 @@ export interface AdminDashboard {
   byCategory: { slug: string; name: string; count: number }[];
   guestItineraries: number;
   plannedStops: number;
+  contacts: number;
+  contactMessages: number;
+  unreadMessages: number;
+  recentMessages: RecentContactMessage[];
 }

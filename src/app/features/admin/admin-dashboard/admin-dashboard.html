@@ -37,6 +37,13 @@
       <span class="stat-card__value">{{ s.approximateCoordinates }}</span>
       <span class="stat-card__label">With approximate coordinates</span>
     </li>
+    <li class="stat-card" [class.stat-card--alert]="s.unreadMessages > 0">
+      <span class="stat-card__icon"><app-icon name="mail" /></span>
+      <span class="stat-card__value">{{ s.unreadMessages }}</span>
+      <a class="stat-card__label" routerLink="/admin/messages" [queryParams]="{ status: 'unread' }"
+        >Unread {{ s.unreadMessages === 1 ? 'message' : 'messages' }}</a
+      >
+    </li>
   </ul>
 
   <div class="grid">
@@ -68,6 +75,45 @@
       <p class="muted">Tourists plan without an account; plans are anonymous.</p>
       <div class="actions">
         <a routerLink="/admin/attractions" class="btn">Manage attractions</a>
+      </div>
+    </section>
+
+    <section class="panel inbox" aria-labelledby="recent-messages-title">
+      <h2 id="recent-messages-title" class="panel__title">
+        <app-icon name="mail" /> Recent messages
+      </h2>
+      <p class="muted">
+        {{ s.contactMessages }} {{ s.contactMessages === 1 ? 'message' : 'messages' }} from
+        {{ s.contacts }} {{ s.contacts === 1 ? 'person' : 'people' }} through the contact form.
+      </p>
+      @if (s.recentMessages.length === 0) {
+        <p class="inbox__empty">No messages yet.</p>
+      } @else {
+        <ul class="inbox__list">
+          @for (m of s.recentMessages; track m.messageId) {
+            <li>
+              <a
+                class="inbox__item"
+                [class.inbox__item--unread]="!m.isRead"
+                [routerLink]="['/admin/messages', m.contactId]"
+              >
+                <span class="inbox__who">
+                  {{ m.name }}
+                  @if (!m.isRead) {
+                    <span class="badge badge--gold">New</span>
+                  }
+                </span>
+                <span class="inbox__subject">{{ m.subject }}</span>
+                <time class="inbox__time" [attr.datetime]="m.receivedAtUtc">{{
+                  m.receivedAtUtc | date: 'd MMM, h:mm a'
+                }}</time>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+      <div class="actions">
+        <a routerLink="/admin/messages" class="btn">View all messages</a>
       </div>
     </section>
   </div>
