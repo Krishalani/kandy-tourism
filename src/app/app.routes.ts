@@ -77,6 +77,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/my-plan/my-plan'),
       },
       {
+        path: 'my-plan/ready',
+        title: `Your day is ready | ${SITE}`,
+        loadComponent: () => import('./features/plan-ready/plan-ready'),
+      },
+      {
+        path: 'trip/:shareId',
+        title: `Shared day plan | ${SITE}`,
+        loadComponent: () => import('./features/shared-trip/shared-trip'),
+      },
+      {
         path: 'about',
         title: `About Kandy | ${SITE}`,
         loadComponent: () => import('./features/about/about'),

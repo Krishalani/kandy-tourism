@@ -66,6 +66,19 @@ export interface Itinerary {
   start: ItineraryStartDto;
   stops: { order: number; attraction: AttractionSummary }[];
   maxStops: number;
+  /** Planned trip day, `yyyy-MM-dd` (Sri Lanka date). */
+  tripDate?: string;
+  /** Set while a read-only share link is active. */
+  shareId?: string;
+  updatedAtUtc: string;
+}
+
+/** A plan opened through its read-only share link (`SharedItineraryDto`). */
+export interface SharedItinerary {
+  shareId: string;
+  start: ItineraryStartDto;
+  stops: { order: number; attraction: AttractionSummary }[];
+  tripDate?: string;
   updatedAtUtc: string;
 }
 

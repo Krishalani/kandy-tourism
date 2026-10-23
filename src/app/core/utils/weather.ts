@@ -1,6 +1,7 @@
 import { IconName } from '../../shared/components/icon/icons';
 import { AttractionSummary } from '../models/attraction.model';
 import { DailyWeather, HourlyWeather, WeatherCondition } from '../models/weather.model';
+import { addDays, parseDate } from './trip-date';
 
 /** Hours (local, inclusive) when tourists are likely to be out sightseeing. */
 export const SIGHTSEEING_START_HOUR = 6;
@@ -257,14 +258,4 @@ function listNames(names: readonly string[]): string {
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function parseDate(date: string): Date {
-  return new Date(`${date}T00:00:00Z`);
-}
-
-function addDays(date: string, days: number): string {
-  const result = parseDate(date);
-  result.setUTCDate(result.getUTCDate() + days);
-  return result.toISOString().slice(0, 10);
 }

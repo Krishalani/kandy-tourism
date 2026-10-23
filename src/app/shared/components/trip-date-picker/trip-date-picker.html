@@ -1,0 +1,48 @@
+<section class="panel trip-date" aria-labelledby="trip-date-title">
+  <div class="trip-date__row">
+    <div>
+      <h2 id="trip-date-title" class="panel__title"><app-icon name="calendar" /> Trip date</h2>
+      <p id="trip-date-hint" class="trip-date__hint">Used for the weather forecast and your PDF.</p>
+    </div>
+    <div class="trip-date__field">
+      <label class="visually-hidden" for="trip-date">Trip date</label>
+      <input
+        id="trip-date"
+        class="input"
+        type="date"
+        [min]="today"
+        [max]="maxDate"
+        [value]="plan.tripDate() ?? ''"
+        [disabled]="saving()"
+        [attr.aria-invalid]="error() ? true : null"
+        [attr.aria-describedby]="error() ? 'trip-date-hint trip-date-error' : 'trip-date-hint'"
+        (change)="choose($event)"
+      />
+      @if (plan.tripDate()) {
+        <button
+          type="button"
+          class="btn btn--sm btn--ghost"
+          [disabled]="saving()"
+          (click)="clear()"
+        >
+          Clear<span class="visually-hidden"> trip date</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <p id="trip-date-error" class="field__error" role="alert">
+      <app-icon name="alert" [size]="16" /> {{ error() }}
+    </p>
+  }
+  @if (label(); as text) {
+    <p class="trip-date__chosen" [class.trip-date__chosen--past]="isPast()">
+      <app-icon [name]="isPast() ? 'alert' : 'check'" [size]="16" />
+      {{ text }}
+      @if (isPast()) {
+        · this date has passed, so choose a new one.
+      }
+    </p>
+  }
+</section>

@@ -158,6 +158,16 @@
   letter-spacing: 0.04em;
 }
 
+.day__trip {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-gold-400);
+  color: var(--color-forest-900);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .day__temps {
   font-size: var(--text-sm);
   color: var(--color-text-muted);

@@ -1,10 +1,20 @@
 import { jsPDF } from 'jspdf';
 import { RowInput, autoTable } from 'jspdf-autotable';
-import { SITE_INFO } from '../../core/data/site-content';
-import { Attraction } from '../../core/models/attraction.model';
-import { ItineraryStop, ItinerarySummary, ResolvedStart } from '../../core/models/trip-plan.model';
-import { buildGoogleMapsPlaceUrl } from '../../core/utils/route-planner';
 import { formatDuration } from '../../shared/pipes/duration.pipe';
+import { SITE_INFO } from '../data/site-content';
+import { Attraction } from '../models/attraction.model';
+import { ItineraryStop, ItinerarySummary, ResolvedStart } from '../models/trip-plan.model';
+import { buildGoogleMapsPlaceUrl } from '../utils/route-planner';
+import { formatTripDate } from '../utils/trip-date';
+
+/** The forecast for the trip day, when it is close enough for a live forecast. */
+export interface ItineraryPdfWeather {
+  summary: string;
+  maxTemperatureC: number;
+  minTemperatureC: number;
+  precipitationProbability: number | null;
+  advice: string | null;
+}
 
 export interface ItineraryPdfData {
   start: ResolvedStart;
@@ -13,6 +23,9 @@ export interface ItineraryPdfData {
   details: readonly (Attraction | null)[];
   summary: ItinerarySummary;
   directionsUrl: string | null;
+  /** Planned trip day, `yyyy-MM-dd`. */
+  tripDate: string | null;
+  weather: ItineraryPdfWeather | null;
   generatedAt: Date;
 }
 
@@ -49,9 +62,14 @@ const CONTENT_TOP = 22;
 const FOOTER_SPACE = 12;
 const STOP_INDENT = 14;
 
-export function itineraryPdfFileName(date: Date): string {
+/** Named after the trip day (`yyyy-MM-dd`) when there is one, otherwise the day it was made. */
+export function itineraryPdfFileName(date: string | Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `kandy-day-trip-itinerary-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.pdf`;
+  const day =
+    typeof date === 'string'
+      ? date
+      : `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return `kandy-day-trip-itinerary-${day}.pdf`;
 }
 
 /** Draws the tourist's itinerary as a printable A4 document. */
@@ -108,8 +126,15 @@ class ItineraryPdfWriter {
     this.setStyle({ size: 24, style: 'bold', color: COLORS.white, font: 'times' });
     doc.text('One-day itinerary', MARGIN, 15.5, { baseline: 'top' });
 
-    this.setStyle({ size: 9.5, color: COLORS.forest200 });
-    doc.text(pdfText(SITE_INFO.tagline), MARGIN, 28.5, { baseline: 'top' });
+    const subtitle = this.data.tripDate
+      ? `Trip day: ${formatTripDate(this.data.tripDate)}`
+      : SITE_INFO.tagline;
+    this.setStyle({
+      size: 9.5,
+      style: this.data.tripDate ? 'bold' : 'normal',
+      color: COLORS.forest200,
+    });
+    doc.text(pdfText(subtitle), MARGIN, 28.5, { baseline: 'top' });
 
     const right = this.pageWidth - MARGIN;
     this.setStyle({ size: 8, color: COLORS.forest200 });
@@ -121,10 +146,11 @@ class ItineraryPdfWriter {
   }
 
   private drawOverview(): void {
-    const { start, stops, summary } = this.data;
+    const { start, stops, summary, tripDate, weather } = this.data;
     this.sectionHeading('Trip overview');
 
     const stats: [string, string][] = [
+      ['Trip date', tripDate ? formatTripDate(tripDate) : 'Not chosen yet'],
       ['Starting point', start.label || 'Not set'],
       ['Stops', `${stops.length} ${stops.length === 1 ? 'stop' : 'stops'}`],
       [
@@ -133,7 +159,6 @@ class ItineraryPdfWriter {
           ? `About ${formatDuration(summary.totalVisitMinutes)}`
           : 'Not available',
       ],
-      ['Travel time', 'Shown in Google Maps'],
     ];
 
     const gap = 4;
@@ -173,6 +198,24 @@ class ItineraryPdfWriter {
       );
     });
     this.y += boxHeight + 5;
+
+    if (weather) {
+      const rain =
+        weather.precipitationProbability === null
+          ? ''
+          : `, ${weather.precipitationProbability}% chance of rain`;
+      this.paragraph(
+        'Weather forecast for the day',
+        { size: 9.5, style: 'bold', color: COLORS.ink600 },
+        { gapAfter: 1 },
+      );
+      this.paragraph(
+        `${weather.summary}, ${Math.round(weather.maxTemperatureC)}°C / ${Math.round(weather.minTemperatureC)}°C${rain}.` +
+          (weather.advice ? ` ${weather.advice}` : ''),
+        { size: 10, color: COLORS.ink900 },
+        { gapAfter: 4 },
+      );
+    }
 
     if (summary.stopsWithoutDuration > 0) {
       const n = summary.stopsWithoutDuration;
@@ -390,6 +433,11 @@ class ItineraryPdfWriter {
       'Travel time between stops is not included above. Leave time for travel, meals and rest.',
       'Locations marked "approximate" are best-effort estimates rather than surveyed points.',
     ];
+    if (this.data.weather) {
+      notes.push(
+        'The weather is the Open-Meteo forecast from when this PDF was created. Check it again on the day.',
+      );
+    }
     for (const note of notes) {
       this.bullet(note, MARGIN, this.contentWidth, COLORS.ink600);
     }

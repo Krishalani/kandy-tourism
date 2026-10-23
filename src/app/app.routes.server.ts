@@ -7,6 +7,15 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client,
   },
   {
+    path: 'my-plan/ready',
+    renderMode: RenderMode.Client,
+  },
+  {
+    // A shared plan is fetched by its link ID; it is only ever viewed in the browser.
+    path: 'trip/:shareId',
+    renderMode: RenderMode.Client,
+  },
+  {
     // Attraction data comes from the Web API, so these pages are rendered per request (not at
     // build time) and always reflect the current database.
     path: '',

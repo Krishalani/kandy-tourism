@@ -95,6 +95,11 @@ export class TripPlanService {
       : { type: 'preset', label: 'Starting point' };
   });
 
+  /** Planned trip day (`yyyy-MM-dd`), if the tourist has chosen one. */
+  readonly tripDate = computed(() => this.view()?.tripDate ?? null);
+  /** ID of the read-only share link, while sharing is on. */
+  readonly shareId = computed(() => this.view()?.shareId ?? null);
+
   readonly stops = computed(() => numberStops(this.view()?.stops.map((s) => s.attraction) ?? []));
   readonly count = computed(() => this.stops().length);
   readonly isFull = computed(() => this.count() >= MAX_ITINERARY_STOPS);
@@ -237,6 +242,32 @@ export class TripPlanService {
       this.sessionLocation.set(null);
     }
     return saved;
+  }
+
+  /** Resolves to false if the date couldn't be saved (the tourist has been told why). */
+  setTripDate(tripDate: string | null): Promise<boolean> {
+    return this.save(
+      (it) => ({ ...it, tripDate: tripDate ?? undefined }),
+      (ref) => this.api.updateTripDate(ref, tripDate),
+      'Your trip date couldn’t be saved.',
+    );
+  }
+
+  /** Turns on the read-only share link; resolves to false if that failed. */
+  enableSharing(): Promise<boolean> {
+    return this.save(
+      null,
+      (ref) => this.api.enableSharing(ref),
+      'A share link couldn’t be created.',
+    );
+  }
+
+  disableSharing(): Promise<boolean> {
+    return this.save(
+      (it) => ({ ...it, shareId: undefined }),
+      (ref) => this.api.disableSharing(ref),
+      'Sharing couldn’t be turned off.',
+    );
   }
 
   /** Loads (or reloads) the saved plan from the API. */

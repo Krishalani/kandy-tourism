@@ -7,6 +7,7 @@ import {
   GuestPlanRef,
   Itinerary,
   ItineraryStartDto,
+  SharedItinerary,
 } from '../models/trip-plan.model';
 
 const TOKEN_HEADER = 'X-Itinerary-Token';
@@ -63,6 +64,25 @@ export class ItineraryApiService {
 
   clear(ref: GuestPlanRef): Observable<Itinerary> {
     return this.http.delete<Itinerary>(this.url(ref, '/stops'), this.options(ref));
+  }
+
+  updateTripDate(ref: GuestPlanRef, tripDate: string | null): Observable<Itinerary> {
+    return this.http.put<Itinerary>(this.url(ref, '/trip-date'), { tripDate }, this.options(ref));
+  }
+
+  enableSharing(ref: GuestPlanRef): Observable<Itinerary> {
+    return this.http.post<Itinerary>(this.url(ref, '/share'), {}, this.options(ref));
+  }
+
+  disableSharing(ref: GuestPlanRef): Observable<Itinerary> {
+    return this.http.delete<Itinerary>(this.url(ref, '/share'), this.options(ref));
+  }
+
+  /** A shared plan, read-only. Needs no token. */
+  getShared(shareId: string): Observable<SharedItinerary> {
+    return this.http.get<SharedItinerary>(
+      apiUrl(`/shared-itineraries/${encodeURIComponent(shareId)}`),
+    );
   }
 
   private url(ref: GuestPlanRef, suffix = ''): string {

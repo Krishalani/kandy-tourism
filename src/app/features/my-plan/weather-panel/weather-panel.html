@@ -82,6 +82,9 @@
           (click)="selectDay(d.date)"
         >
           <span class="day__name">{{ dayName(d.date) }}</span>
+          @if (d.date === tripDate()) {
+            <span class="day__trip">Trip</span>
+          }
           <app-icon [name]="weatherIcon(d.condition)" [size]="26" [strokeWidth]="1.75" />
           <span class="day__temps">
             <strong>{{ d.maxTemperatureC | number: '1.0-0' }}°</strong>

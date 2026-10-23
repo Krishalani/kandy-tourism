@@ -1,5 +1,12 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, catchError, map, of, startWith, switchMap } from 'rxjs';
 import { DailyWeather, WeatherForecast } from '../../../core/models/weather.model';
@@ -50,7 +57,9 @@ export class WeatherPanel {
     return state.status === 'ready' ? state.data : null;
   });
 
-  private readonly selectedDate = signal<string | null>(null);
+  /** Follows the plan's trip date until the tourist picks another day here. */
+  private readonly selectedDate = linkedSignal<string | null>(() => this.plan.tripDate());
+  protected readonly tripDate = this.plan.tripDate;
 
   /** Today's date and hour at the destination, from the provider's current conditions. */
   private readonly today = computed(() => this.forecast()?.current.time.slice(0, 10) ?? '');
@@ -128,8 +137,9 @@ export class WeatherPanel {
       day.precipitationProbability === null
         ? ''
         : `, ${day.precipitationProbability}% chance of rain`;
+    const trip = day.date === this.tripDate() ? ' (your trip day)' : '';
     return (
-      `${this.dayHeading(day.date)}: ${day.summary}, high ${Math.round(day.maxTemperatureC)}°, ` +
+      `${this.dayHeading(day.date)}${trip}: ${day.summary}, high ${Math.round(day.maxTemperatureC)}°, ` +
       `low ${Math.round(day.minTemperatureC)}°${rain}`
     );
   }

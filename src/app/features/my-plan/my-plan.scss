@@ -96,6 +96,27 @@
   margin: 0;
 }
 
+.finish {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-color: var(--color-forest-200);
+  background: linear-gradient(135deg, var(--color-forest-50), var(--color-surface));
+}
+
+.finish__title {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-lg);
+}
+
+.finish__text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 @media (max-width: 1024px) {
   .plan-layout {
     grid-template-columns: 1fr;

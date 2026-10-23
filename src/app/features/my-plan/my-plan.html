@@ -10,6 +10,9 @@
     </div>
     @if (plan.restored() && plan.count() > 0) {
       <div class="page-header__actions no-print">
+        <a routerLink="/my-plan/ready" class="btn btn--sm btn--primary">
+          <app-icon name="check" [size]="16" /> Finish planning
+        </a>
         <button
           type="button"
           class="btn btn--sm"
@@ -71,6 +74,8 @@
       <app-start-point-picker class="no-print" />
       <p class="print-only print-start"><strong>Start:</strong> {{ plan.resolvedStart().label }}</p>
 
+      <app-trip-date-picker class="no-print" />
+
       <section class="panel stops" aria-labelledby="stops-title">
         <div class="stops__header">
           <h2 id="stops-title" class="panel__title">
@@ -108,6 +113,18 @@
       <app-weather-panel class="no-print" />
 
       <app-trip-summary />
+
+      <section class="panel finish no-print" aria-labelledby="finish-title">
+        <div>
+          <h2 id="finish-title" class="finish__title">Happy with your plan?</h2>
+          <p class="finish__text">
+            Review your day, then download the PDF, open directions or share it with your group.
+          </p>
+        </div>
+        <a routerLink="/my-plan/ready" class="btn btn--primary">
+          Finish planning <app-icon name="arrow-right" [size]="18" />
+        </a>
+      </section>
     </div>
 
     <section #mapSection class="plan-map no-print" aria-label="Route preview" tabindex="-1">

@@ -1,0 +1,102 @@
+@let load = state();
+<header class="page-header">
+  <div class="container">
+    <span class="eyebrow">Shared day plan</span>
+    <h1>A day in Kandy</h1>
+    @if (trip(); as t) {
+      <p class="lead">
+        @if (t.dateLabel) {
+          Planned for <strong>{{ t.dateLabel }}</strong
+          >.
+        }
+        Someone shared this itinerary with you. You can view it, open the directions or download the
+        PDF.
+      </p>
+    }
+  </div>
+</header>
+
+@if (load.status === 'loading') {
+  <div class="container loading" role="status">Loading the shared plan…</div>
+} @else if (load.status === 'error') {
+  <div class="container">
+    <app-error-state title="This plan isn’t available" [message]="load.message">
+      <a routerLink="/explore" class="btn btn--primary">Plan your own day</a>
+    </app-error-state>
+  </div>
+} @else if (trip(); as t) {
+  <div class="container layout">
+    <div class="main">
+      <section class="panel" aria-labelledby="shared-route-title">
+        <h2 id="shared-route-title" class="panel__title">
+          <app-icon name="route" /> {{ t.stops.length }}
+          {{ t.stops.length === 1 ? 'stop' : 'stops' }}
+          @if (t.summary.totalVisitMinutes > 0) {
+            <span class="muted"
+              >· about {{ t.summary.totalVisitMinutes | duration }} at attractions</span
+            >
+          }
+        </h2>
+        @if (t.stops.length > 0) {
+          <app-itinerary-timeline [startLabel]="t.start.label" [stops]="t.stops" />
+        } @else {
+          <p class="muted">This plan doesn’t have any stops at the moment.</p>
+        }
+      </section>
+    </div>
+
+    <aside class="side">
+      @if (tripWeather(); as w) {
+        <section class="panel weather" aria-labelledby="shared-weather-title">
+          <h2 id="shared-weather-title" class="panel__title">Weather on the day</h2>
+          <div class="weather__row">
+            <app-icon [name]="weatherIcon(w.condition)" [size]="40" [strokeWidth]="1.6" />
+            <div>
+              <p class="weather__summary">{{ w.summary }}</p>
+              <p class="muted">
+                {{ w.maxTemperatureC.toFixed(0) }}° / {{ w.minTemperatureC.toFixed(0) }}°
+                @if (w.precipitationProbability !== null) {
+                  · {{ w.precipitationProbability }}% chance of rain
+                }
+              </p>
+            </div>
+          </div>
+          <p class="weather__source">Forecast by Open-Meteo. Check again on the day.</p>
+        </section>
+      }
+
+      <section class="panel actions" aria-labelledby="shared-actions-title">
+        <h2 id="shared-actions-title" class="panel__title">
+          <app-icon name="navigation" /> Use this plan
+        </h2>
+        @if (t.directionsUrl; as url) {
+          <a class="btn btn--primary btn--block" [href]="url" target="_blank" rel="noopener">
+            <app-icon name="navigation" [size]="18" /> Open directions in Google Maps
+            <span class="visually-hidden">(opens in a new tab)</span>
+          </a>
+        }
+        @if (t.stops.length > 0) {
+          <button
+            type="button"
+            class="btn btn--block"
+            [disabled]="downloadingPdf()"
+            (click)="downloadPdf()"
+          >
+            <app-icon name="download" [size]="18" />
+            {{ downloadingPdf() ? 'Preparing PDF…' : 'Download itinerary (PDF)' }}
+          </button>
+        }
+      </section>
+
+      <section class="panel cta" aria-labelledby="own-title">
+        <h2 id="own-title" class="panel__title">Plan your own day</h2>
+        <p class="muted">
+          Pick the temples, gardens and viewpoints you like and get your own route, weather and PDF.
+        </p>
+        <a routerLink="/explore" class="btn btn--sm">
+          <app-icon name="compass" [size]="16" /> Explore attractions
+        </a>
+      </section>
+    </aside>
+  </div>
+}

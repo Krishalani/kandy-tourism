@@ -215,6 +215,50 @@ describe('TripPlanService', () => {
     expect(plan.count()).toBe(2);
   });
 
+  it('saves the trip date and rolls it back if the API rejects it', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE]));
+    await restoring;
+
+    const saving = plan.setTripDate('2026-10-25');
+    expect(plan.tripDate()).toBe('2026-10-25');
+    const request = await expectRequest('PUT', `${planUrl}/trip-date`);
+    expect(request.request.body).toEqual({ tripDate: '2026-10-25' });
+    request.flush({ ...itinerary([LAKE]), tripDate: '2026-10-25' });
+    expect(await saving).toBe(true);
+
+    const rejected = plan.setTripDate('2026-10-01');
+    (await expectRequest('PUT', `${planUrl}/trip-date`)).flush(
+      { status: 400, code: 'invalid-trip-date', detail: 'Choose today or a later date.' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    expect(await rejected).toBe(false);
+    expect(plan.tripDate()).toBe('2026-10-25');
+    expect(toast.toasts().at(-1)?.message).toBe('Choose today or a later date.');
+  });
+
+  it('turns the share link on and off', async () => {
+    storeRef();
+    const restoring = plan.restore();
+    (await expectRequest('GET', planUrl)).flush(itinerary([LAKE]));
+    await restoring;
+    expect(plan.shareId()).toBeNull();
+
+    const enabling = plan.enableSharing();
+    (await expectRequest('POST', `${planUrl}/share`)).flush({
+      ...itinerary([LAKE]),
+      shareId: 'b1e2c3d4-0000-4000-8000-000000000001',
+    });
+    await enabling;
+    expect(plan.shareId()).toBe('b1e2c3d4-0000-4000-8000-000000000001');
+
+    const disabling = plan.disableSharing();
+    expect(plan.shareId()).toBeNull();
+    (await expectRequest('DELETE', `${planUrl}/share`)).flush(itinerary([LAKE]));
+    expect(await disabling).toBe(true);
+  });
+
   it('forgets a plan the server no longer has', async () => {
     storeRef();
     const restoring = plan.restore();

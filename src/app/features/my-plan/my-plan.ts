@@ -7,13 +7,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { AttractionService } from '../../core/services/attraction.service';
+import { ItineraryPdfService } from '../../core/pdf/itinerary-pdf.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
 import { TripPlanService } from '../../core/services/trip-plan.service';
 import { suggestShorterOrder, totalStraightLineKm } from '../../core/utils/route-planner';
 import { Icon } from '../../shared/components/icon/icon';
+import { TripDatePicker } from '../../shared/components/trip-date-picker/trip-date-picker';
 import { EmptyState } from '../../shared/components/state/empty-state';
 import { ErrorState } from '../../shared/components/state/error-state';
 import { ItineraryList } from './itinerary-list/itinerary-list';
@@ -30,6 +30,7 @@ import { WeatherPanel } from './weather-panel/weather-panel';
     EmptyState,
     ErrorState,
     StartPointPicker,
+    TripDatePicker,
     ItineraryList,
     RouteMap,
     TripSummary,
@@ -43,7 +44,7 @@ export default class MyPlan {
   protected readonly plan = inject(TripPlanService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
-  private readonly attractions = inject(AttractionService);
+  private readonly pdf = inject(ItineraryPdfService);
 
   private readonly mapSection = viewChild<ElementRef<HTMLElement>>('mapSection');
   protected readonly addingSample = signal(false);
@@ -122,28 +123,12 @@ export default class MyPlan {
     }
     this.downloadingPdf.set(true);
     try {
-      const stops = this.plan.stops();
-      const [pdf, details] = await Promise.all([
-        import('./itinerary-pdf'),
-        Promise.all(
-          stops.map((s) =>
-            firstValueFrom(this.attractions.getBySlug(s.attraction.slug)).catch(() => null),
-          ),
-        ),
-      ]);
-      const generatedAt = new Date();
-      pdf
-        .createItineraryPdf({
-          start: this.plan.resolvedStart(),
-          stops,
-          details,
-          summary: this.plan.summary(),
-          directionsUrl: this.plan.directionsUrl(),
-          generatedAt,
-        })
-        .save(pdf.itineraryPdfFileName(generatedAt));
-
-      if (details.some((d) => d === null)) {
+      const { missingDetails } = await this.pdf.download({
+        start: this.plan.resolvedStart(),
+        stops: this.plan.stops(),
+        tripDate: this.plan.tripDate(),
+      });
+      if (missingDetails) {
         this.toast.show(
           'Your itinerary PDF has been downloaded, but some stop details couldn’t be loaded.',
           { tone: 'info' },

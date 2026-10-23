@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+.trip-date {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.trip-date__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+
+  .panel__title {
+    margin-bottom: var(--space-1);
+  }
+}
+
+.trip-date__hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.trip-date__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  .input {
+    width: auto;
+    min-width: 11rem;
+  }
+}
+
+.trip-date__chosen {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-forest-50);
+  color: var(--color-forest-900);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.trip-date__chosen--past {
+  background: var(--color-gold-100);
+  color: var(--color-gold-700);
+}
+
+@media (max-width: 480px) {
+  .trip-date__field,
+  .trip-date__field .input {
+    width: 100%;
+  }
+}

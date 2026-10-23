@@ -1,0 +1,161 @@
+<header class="page-header">
+  <div class="container hero">
+    <span class="hero__icon" aria-hidden="true"><app-icon name="party-popper" [size]="30" /></span>
+    <div>
+      <span class="eyebrow">Finish planning</span>
+      @if (plan.restored() && plan.count() > 0) {
+        <h1>{{ ready() ? 'Your Kandy day is ready!' : 'Almost ready' }}</h1>
+        <p class="lead">{{ overview() }} Check the list below, then take your plan with you.</p>
+      } @else {
+        <h1>Finish your plan</h1>
+      }
+    </div>
+  </div>
+</header>
+
+@if (!plan.restored()) {
+  <div class="container loading" role="status">Loading your saved plan…</div>
+} @else if (plan.count() === 0) {
+  <div class="container">
+    <app-empty-state
+      icon="route"
+      title="Nothing to finish yet"
+      message="Add the places you’d like to visit, then come back here to get your PDF, directions and share link."
+    >
+      <a routerLink="/explore" class="btn btn--primary btn--lg">
+        <app-icon name="compass" /> Explore attractions
+      </a>
+    </app-empty-state>
+  </div>
+} @else {
+  <div class="container layout">
+    <div class="main">
+      <section class="panel" aria-labelledby="checklist-title">
+        <h2 id="checklist-title" class="panel__title"><app-icon name="check" /> Before you go</h2>
+        <ul class="checklist">
+          @for (item of checklist(); track item.id) {
+            <li [class]="'check check--' + item.status">
+              <span class="check__icon" aria-hidden="true">
+                <app-icon
+                  [name]="
+                    item.status === 'done' ? 'check' : item.status === 'info' ? item.icon : 'alert'
+                  "
+                  [size]="16"
+                />
+              </span>
+              <div>
+                <p class="check__title">
+                  <span class="visually-hidden">{{
+                    item.status === 'done'
+                      ? 'Done: '
+                      : item.status === 'todo'
+                        ? 'To do: '
+                        : item.status === 'warn'
+                          ? 'Check: '
+                          : ''
+                  }}</span
+                  >{{ item.title }}
+                </p>
+                @if (item.detail) {
+                  <p class="check__detail">{{ item.detail }}</p>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <app-trip-date-picker />
+
+      <section class="panel" aria-labelledby="route-title">
+        <h2 id="route-title" class="panel__title"><app-icon name="route" /> Your day</h2>
+        <app-itinerary-timeline
+          class="route"
+          [startLabel]="plan.resolvedStart().label"
+          [stops]="plan.stops()"
+        />
+        <a routerLink="/my-plan" class="btn btn--sm">
+          <app-icon name="edit" [size]="16" /> Edit plan
+        </a>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="panel actions" aria-labelledby="take-title">
+        <h2 id="take-title" class="panel__title">
+          <app-icon name="navigation" /> Take it with you
+        </h2>
+        @if (plan.directionsUrl(); as url) {
+          <a class="btn btn--primary btn--block" [href]="url" target="_blank" rel="noopener">
+            <app-icon name="navigation" [size]="18" /> Open directions in Google Maps
+            <span class="visually-hidden">(opens in a new tab)</span>
+          </a>
+        }
+        <button
+          type="button"
+          class="btn btn--block"
+          [disabled]="downloadingPdf()"
+          (click)="downloadPdf()"
+        >
+          <app-icon name="download" [size]="18" />
+          {{ downloadingPdf() ? 'Preparing PDF…' : 'Download itinerary (PDF)' }}
+        </button>
+      </section>
+
+      <section class="panel share" aria-labelledby="share-title">
+        <h2 id="share-title" class="panel__title"><app-icon name="share" /> Share your plan</h2>
+        @if (shareUrl(); as url) {
+          <p class="share__text">Anyone with this link can view your plan, but not change it.</p>
+          <label class="visually-hidden" for="share-link">Share link</label>
+          <input
+            id="share-link"
+            class="input share__link"
+            type="text"
+            readonly
+            [value]="url"
+            (focus)="$any($event.target).select()"
+          />
+          <div class="share__actions">
+            <button type="button" class="btn btn--sm btn--primary" (click)="copyShareLink()">
+              <app-icon name="copy" [size]="16" /> Copy link
+            </button>
+            <a class="btn btn--sm" [href]="url" target="_blank" rel="noopener">
+              <app-icon name="external" [size]="16" /> Open
+              <span class="visually-hidden">(opens in a new tab)</span>
+            </a>
+            <button
+              type="button"
+              class="btn btn--sm btn--ghost"
+              [disabled]="sharing()"
+              (click)="stopSharing()"
+            >
+              Stop sharing
+            </button>
+          </div>
+        } @else {
+          <p class="share__text">
+            Create a read-only link for friends or family travelling with you. You can turn it off
+            at any time.
+          </p>
+          <button
+            type="button"
+            class="btn btn--block"
+            [disabled]="sharing()"
+            (click)="createShareLink()"
+          >
+            <app-icon name="share" [size]="18" />
+            {{ sharing() ? 'Creating link…' : 'Create share link' }}
+          </button>
+        }
+      </section>
+
+      <section class="panel next" aria-labelledby="next-title">
+        <h2 id="next-title" class="panel__title">Planning another day?</h2>
+        <p class="share__text">Start a fresh plan once you’ve saved or shared this one.</p>
+        <button type="button" class="btn btn--sm btn--danger" (click)="startNewPlan()">
+          <app-icon name="refresh" [size]="16" /> Start a new plan
+        </button>
+      </section>
+    </aside>
+  </div>
+}
