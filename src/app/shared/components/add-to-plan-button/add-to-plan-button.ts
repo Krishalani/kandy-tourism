@@ -1,13 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { AttractionSummary } from '../../../core/models/attraction.model';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { TripPlanService } from '../../../core/services/trip-plan.service';
+import { removeStopConfirmation } from '../../../core/utils/plan-confirmations';
 import { Icon } from '../icon/icon';
 
 /**
- * Adds an attraction to My Plan, or removes it again (with undo). Shows a confirmation toast
- * and never creates duplicate stops.
+ * Adds an attraction to My Plan, or removes it again after the tourist confirms (with undo).
+ * Shows a confirmation toast and never creates duplicate stops.
  */
 @Component({
   selector: 'app-add-to-plan-button',
@@ -56,16 +58,28 @@ export class AddToPlanButton {
   readonly variant = input<'toggle' | 'explicit'>('toggle');
 
   private readonly plan = inject(TripPlanService);
+  private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   protected readonly inPlan = computed(() => this.plan.isInPlan(this.attraction().id));
   protected readonly iconSize = computed(() => (this.size() === 'sm' ? 16 : 18));
 
-  protected toggle(): void {
+  protected async toggle(): Promise<void> {
     const attraction = this.attraction();
 
     if (this.inPlan()) {
+      const confirmed = await this.confirm.confirm(
+        removeStopConfirmation(
+          attraction,
+          this.plan.stopNumberOf(attraction.id),
+          this.plan.count(),
+        ),
+      );
+      // The plan may have changed while the dialog was open.
+      if (!confirmed || !this.plan.isInPlan(attraction.id)) {
+        return;
+      }
       const index = this.plan.remove(attraction.id);
       this.toast.show(`${attraction.name} was removed from My Plan.`, {
         tone: 'info',

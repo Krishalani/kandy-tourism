@@ -16,8 +16,10 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ItineraryStop } from '../../../core/models/trip-plan.model';
+import { ConfirmService } from '../../../core/services/confirm.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { TripPlanService } from '../../../core/services/trip-plan.service';
+import { removeStopConfirmation } from '../../../core/utils/plan-confirmations';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ImgFallbackDirective } from '../../../shared/directives/img-fallback.directive';
 import { DurationPipe } from '../../../shared/pipes/duration.pipe';
@@ -44,6 +46,7 @@ import { DurationPipe } from '../../../shared/pipes/duration.pipe';
 })
 export class ItineraryList {
   protected readonly plan = inject(TripPlanService);
+  private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -68,8 +71,14 @@ export class ItineraryList {
     this.moveBy(stop, 1);
   }
 
-  protected remove(stop: ItineraryStop): void {
+  protected async remove(stop: ItineraryStop): Promise<void> {
     const attraction = stop.attraction;
+    const confirmed = await this.confirm.confirm(
+      removeStopConfirmation(attraction, stop.order, this.plan.count()),
+    );
+    if (!confirmed || !this.plan.isInPlan(attraction.id)) {
+      return;
+    }
     const index = this.plan.remove(attraction.id);
     this.announcement.set(`${attraction.name} removed. ${this.plan.count()} stops remaining.`);
     this.toast.show(`${attraction.name} was removed from My Plan.`, {

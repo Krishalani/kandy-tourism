@@ -99,7 +99,10 @@ export class ConfirmDialog {
 
   protected onClose(): void {
     this.confirmService.request()?.resolve(false);
-    this.returnFocusTo?.focus?.();
+    // If the confirmed action removed the trigger, the caller has already moved focus.
+    if (this.returnFocusTo?.isConnected) {
+      this.returnFocusTo.focus();
+    }
     this.returnFocusTo = null;
   }
 }
