@@ -7,6 +7,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { AttractionService } from '../../core/services/attraction.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
 import { TripPlanService } from '../../core/services/trip-plan.service';
@@ -39,9 +41,11 @@ export default class MyPlan {
   protected readonly plan = inject(TripPlanService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+  private readonly attractions = inject(AttractionService);
 
   private readonly mapSection = viewChild<ElementRef<HTMLElement>>('mapSection');
   protected readonly addingSample = signal(false);
+  protected readonly downloadingPdf = signal(false);
 
   protected async clearPlan(): Promise<void> {
     const confirmed = await this.confirm.confirm({
@@ -110,8 +114,48 @@ export default class MyPlan {
     void this.plan.restore();
   }
 
-  protected print(): void {
-    window.print();
+  protected async downloadPdf(): Promise<void> {
+    if (this.downloadingPdf()) {
+      return;
+    }
+    this.downloadingPdf.set(true);
+    try {
+      const stops = this.plan.stops();
+      const [pdf, details] = await Promise.all([
+        import('./itinerary-pdf'),
+        Promise.all(
+          stops.map((s) =>
+            firstValueFrom(this.attractions.getBySlug(s.attraction.slug)).catch(() => null),
+          ),
+        ),
+      ]);
+      const generatedAt = new Date();
+      pdf
+        .createItineraryPdf({
+          start: this.plan.resolvedStart(),
+          stops,
+          details,
+          summary: this.plan.summary(),
+          directionsUrl: this.plan.directionsUrl(),
+          generatedAt,
+        })
+        .save(pdf.itineraryPdfFileName(generatedAt));
+
+      if (details.some((d) => d === null)) {
+        this.toast.show(
+          'Your itinerary PDF has been downloaded, but some stop details couldn’t be loaded.',
+          { tone: 'info' },
+        );
+      } else {
+        this.toast.show('Your itinerary PDF has been downloaded.');
+      }
+    } catch {
+      this.toast.show('We couldn’t create your itinerary PDF. Please try again.', {
+        tone: 'error',
+      });
+    } finally {
+      this.downloadingPdf.set(false);
+    }
   }
 
   protected showMap(): void {

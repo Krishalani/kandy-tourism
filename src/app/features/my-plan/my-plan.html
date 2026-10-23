@@ -10,8 +10,14 @@
     </div>
     @if (plan.restored() && plan.count() > 0) {
       <div class="page-header__actions no-print">
-        <button type="button" class="btn btn--sm" (click)="print()">
-          <app-icon name="printer" [size]="16" /> Print itinerary
+        <button
+          type="button"
+          class="btn btn--sm"
+          [disabled]="downloadingPdf()"
+          (click)="downloadPdf()"
+        >
+          <app-icon name="download" [size]="16" />
+          {{ downloadingPdf() ? 'Preparing PDF…' : 'Download itinerary (PDF)' }}
         </button>
         <button type="button" class="btn btn--sm btn--danger" (click)="clearPlan()">
           <app-icon name="trash" [size]="16" /> Clear plan
