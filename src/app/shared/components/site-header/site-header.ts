@@ -43,8 +43,10 @@ interface NavLink {
                   @if (link.path === '/my-plan') {
                     <app-icon name="route" [size]="18" />
                     {{ link.label }}
-                    <span class="count" aria-hidden="true">{{ plan.count() }}</span>
-                    <span class="visually-hidden">({{ countLabel() }})</span>
+                    @if (plan.count() > 0) {
+                      <span class="count" aria-hidden="true">{{ plan.count() }}</span>
+                      <span class="visually-hidden">({{ countLabel() }})</span>
+                    }
                   } @else {
                     {{ link.label }}
                   }
@@ -58,8 +60,10 @@ interface NavLink {
           <a routerLink="/my-plan" class="plan-pill">
             <app-icon name="route" [size]="18" />
             <span class="plan-pill__label">My Plan</span>
-            <span class="count" aria-hidden="true">{{ plan.count() }}</span>
-            <span class="visually-hidden">({{ countLabel() }})</span>
+            @if (plan.count() > 0) {
+              <span class="count" aria-hidden="true">{{ plan.count() }}</span>
+              <span class="visually-hidden">({{ countLabel() }})</span>
+            }
           </a>
           <button
             type="button"
