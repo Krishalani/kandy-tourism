@@ -41,8 +41,9 @@ both. For a deployment, change it to the public API origin and add the site's or
 ## Features
 
 - **Home** – hero, category shortcuts, featured attractions (from the API), how it works.
-- **Explore** – server-side search, category chips, visit-length filter, sorting, result count,
-  "Show more" paging. Filters are kept in the URL (`/explore?q=temple&category=religious`).
+- **Explore** – server-side search, category chips (one or more at a time), visit-length filter,
+  sorting, result count, "Show more" paging. Filters are kept in the URL
+  (`/explore?q=temple&category=religious,nature`).
 - **Attraction details** (`/attractions/:slug`) – gallery, description, visitor tips, labelled
   estimates, coordinates (flagged when approximate), nearby places, add/remove from plan.
 - **My Plan** – start point (preset, an attraction, typed address, or opt-in current location),

@@ -23,7 +23,9 @@ export class AttractionService {
     if (query) {
       params = params.set('q', query);
     }
-    if (criteria.category && criteria.category !== 'all') {
+    if (criteria.categories?.length) {
+      params = params.set('category', criteria.categories.join(','));
+    } else if (criteria.category && criteria.category !== 'all') {
       params = params.set('category', criteria.category);
     }
     if (criteria.duration && criteria.duration !== 'any') {

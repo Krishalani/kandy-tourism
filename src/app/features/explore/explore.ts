@@ -60,7 +60,8 @@ const CATEGORY_SLUG = /^[a-z0-9-]{1,50}$/;
 
 interface Filters {
   query: string;
-  category: AttractionCategory | 'all';
+  /** Selected category slugs; empty means all categories. */
+  categories: AttractionCategory[];
   duration: DurationFilter;
   sort: AttractionSort;
 }
@@ -109,13 +110,21 @@ function applyPageEvent(current: LoadState<Results>, event: PageEvent): LoadStat
   }
 }
 
+/** `?category=religious,nature` → `['religious', 'nature']`; invalid slugs and "all" are dropped. */
+function categoriesFromParam(value: string | null): AttractionCategory[] {
+  const slugs = (value ?? '')
+    .split(',')
+    .map((slug) => slug.trim())
+    .filter((slug) => CATEGORY_SLUG.test(slug) && slug !== 'all');
+  return [...new Set(slugs)];
+}
+
 function filtersFromParams(params: ParamMap): Filters {
-  const category = params.get('category') ?? '';
   const duration = params.get('duration') ?? '';
   const sort = params.get('sort') ?? '';
   return {
     query: (params.get('q') ?? '').slice(0, 100),
-    category: CATEGORY_SLUG.test(category) ? category : 'all',
+    categories: categoriesFromParam(params.get('category')),
     duration: DURATION_FILTERS.some((d) => d.id === duration)
       ? (duration as DurationFilter)
       : 'any',
@@ -137,7 +146,7 @@ export default class Explore {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   protected readonly plan = inject(TripPlanService);
 
-  protected readonly categories = toSignal(
+  protected readonly categoryOptions = toSignal(
     inject(CatalogService)
       .getCategories()
       .pipe(catchError(() => of<CategoryInfo[]>([]))),
@@ -148,13 +157,13 @@ export default class Explore {
 
   private readonly initial = filtersFromParams(this.route.snapshot.queryParamMap);
   protected readonly query = signal(this.initial.query);
-  protected readonly category = signal(this.initial.category);
+  protected readonly categories = signal<readonly AttractionCategory[]>(this.initial.categories);
   protected readonly duration = signal(this.initial.duration);
   protected readonly sort = signal(this.initial.sort);
 
   private readonly criteria = computed<AttractionSearchCriteria>(() => ({
     query: this.query().trim(),
-    category: this.category(),
+    categories: this.categories(),
     duration: this.duration(),
     sort: this.sort(),
   }));
@@ -184,7 +193,7 @@ export default class Explore {
   protected readonly hasActiveFilters = computed(
     () =>
       this.query().trim() !== '' ||
-      this.category() !== 'all' ||
+      this.categories().length > 0 ||
       this.duration() !== 'any' ||
       this.sort() !== 'recommended',
   );
@@ -221,19 +230,32 @@ export default class Explore {
       }
       const next = filtersFromParams(params);
       this.query.set(next.query);
-      this.category.set(next.category);
+      this.categories.set(next.categories);
       this.duration.set(next.duration);
       this.sort.set(next.sort);
     });
   }
 
-  protected setCategory(category: AttractionCategory | 'all'): void {
-    this.category.set(category);
+  protected isSelected(category: AttractionCategory): boolean {
+    return this.categories().includes(category);
+  }
+
+  /** Adds or removes one category; several can be selected at once. */
+  protected toggleCategory(category: AttractionCategory): void {
+    this.categories.update((selected) =>
+      selected.includes(category)
+        ? selected.filter((c) => c !== category)
+        : [...selected, category],
+    );
+  }
+
+  protected showAllCategories(): void {
+    this.categories.set([]);
   }
 
   protected clearFilters(): void {
     this.query.set('');
-    this.category.set('all');
+    this.categories.set([]);
     this.duration.set('any');
     this.sort.set('recommended');
   }
@@ -302,14 +324,14 @@ export default class Explore {
     }
     const queryParams = {
       q: this.query().trim() || null,
-      category: this.category() === 'all' ? null : this.category(),
+      category: this.categories().join(',') || null,
       duration: this.duration() === 'any' ? null : this.duration(),
       sort: this.sort() === 'recommended' ? null : this.sort(),
     };
     const current = filtersFromParams(this.route.snapshot.queryParamMap);
     const unchanged =
       current.query === (queryParams.q ?? '') &&
-      current.category === this.category() &&
+      current.categories.join(',') === (queryParams.category ?? '') &&
       current.duration === this.duration() &&
       current.sort === this.sort();
     if (unchanged) {

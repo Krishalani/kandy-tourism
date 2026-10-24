@@ -85,6 +85,8 @@ export type DurationFilter = 'any' | 'short' | 'medium' | 'long';
 export interface AttractionSearchCriteria {
   query?: string;
   category?: AttractionCategory | 'all';
+  /** Several categories at once (an attraction in any of them matches); used instead of `category`. */
+  categories?: readonly AttractionCategory[];
   duration?: DurationFilter;
   sort?: AttractionSort;
   featured?: boolean;

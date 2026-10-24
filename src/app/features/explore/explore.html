@@ -60,21 +60,25 @@
       </div>
     </div>
 
-    <div class="filters__categories" role="group" aria-label="Filter by category">
+    <div
+      class="filters__categories"
+      role="group"
+      aria-label="Filter by category (choose one or more)"
+    >
       <button
         type="button"
         class="chip"
-        [attr.aria-pressed]="category() === 'all'"
-        (click)="setCategory('all')"
+        [attr.aria-pressed]="categories().length === 0"
+        (click)="showAllCategories()"
       >
         All categories
       </button>
-      @for (c of categories(); track c.id) {
+      @for (c of categoryOptions(); track c.id) {
         <button
           type="button"
           class="chip"
-          [attr.aria-pressed]="category() === c.id"
-          (click)="setCategory(c.id)"
+          [attr.aria-pressed]="isSelected(c.id)"
+          (click)="toggleCategory(c.id)"
         >
           <app-icon [name]="c.icon" [size]="16" /> {{ c.label }}
         </button>
